@@ -160,10 +160,8 @@ int mythread_gettid(){
 
 /* RR sin prioridad */
 TCB* scheduler(){
-  printf("running: %i\n", running->tid);
   disable_interrupt();
   TCB* aux = dequeue(cola);
-  printf("nextid: %i nextestado: %i\n",aux->tid,aux->state);
   if(aux->state == 3){
     enqueue(cola, aux);
     aux = dequeue(cola);
