@@ -31,7 +31,7 @@ static void idle_function(){
   while(1);
 }
 /* Cola */
-static struct queue *cola;
+static struct queue* cola;
 
 /* Initialize the thread library */
 void init_mythreadlib() {
@@ -73,6 +73,12 @@ void init_mythreadlib() {
   /* Initialize network and clock interrupts */
   init_network_interrupt();
   init_interrupt();
+  /* Initialize queue */
+  disable_interrupt();
+  cola = queue_new();
+  /* Encolamos el idle */
+  enqueue(cola,&idle);
+  enable_interrupt();
 }
 
 
@@ -103,6 +109,7 @@ int mythread_create (void (*fun_addr)(),int priority)
   t_state[i].run_env.uc_stack.ss_size = STACKSIZE;
   t_state[i].run_env.uc_stack.ss_flags = 0;
   makecontext(&t_state[i].run_env, fun_addr, 1); 
+  /* Encolamos los hilos a medida que se van creando */
   enqueue(cola, &t_state[i]);
   return i;
 } /****** End my_thread_create() ******/
@@ -153,13 +160,16 @@ int mythread_gettid(){
 
 /* RR sin prioridad */
 TCB* scheduler(){
+  printf("running: %i\n", running->tid);
   disable_interrupt();
   TCB* aux = dequeue(cola);
-  if(!queue_empty(cola)){
-    disable_interrupt();
-    return aux;
+  printf("nextid: %i nextestado: %i\n",aux->tid,aux->state);
+  if(aux->state == 3){
+    enqueue(cola, aux);
+    aux = dequeue(cola);
   }
-  disable_interrupt();
+  enable_interrupt();
+  return aux;
   printf("mythread_free: No thread in the system\nExiting...\n");	
   exit(1); 
 }
@@ -180,6 +190,22 @@ void timer_interrupt(int sig)
 void activator(TCB* next){
   TCB* prevrunning = running;
   running = next;
-  swapcontext (&(prevrunning->run_env),&(next->run_env));
-  printf("mythread_free: After setcontext, should never get here!!...\n");	
+  current = next->tid;
+  if(running->state == 3){
+    printf("*** FINISH\n");
+    /* Se debería salir del programa */
+    exit(0);
+  }
+  /* Comprobamos si el hilo que va a ser expulsado ha terminado su ejecución */
+  if(!prevrunning->state) {
+    printf("*** THREAD %i TERMINATED: SETCONTEXT OF %i\n", prevrunning->tid,running->tid);
+    setcontext(&(next->run_env));
+    printf("mythread_free: After setcontext, should never get here!!...\n");  
+  }
+  disable_interrupt();
+  enqueue(cola, prevrunning);
+  enable_interrupt();
+  printf("*** SWAPCONTEXT FROM %i TO %i\n", prevrunning->tid,running->tid);
+  swapcontext(&(prevrunning->run_env),&(next->run_env));
+  //printf("mythread_free: After setcontext, should never get here!!...\n");	
 }
