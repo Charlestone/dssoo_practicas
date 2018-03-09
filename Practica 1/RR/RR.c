@@ -177,6 +177,7 @@ TCB* scheduler(){
 void timer_interrupt(int sig)
 {
   running->ticks--;
+  /* Comprobamos si el hilo en ejecución ha terminado su cuanto */
   if(running->ticks == 0) {
     running->ticks = QUANTUM_TICKS;
     TCB* aux = scheduler();
@@ -189,6 +190,7 @@ void activator(TCB* next){
   TCB* prevrunning = running;
   running = next;
   current = next->tid;
+  /* Se comprueba si el hilo que se va a ejecutar es el idle */
   if(running->state == 3){
     printf("*** FINISH\n");
     /* Se debería salir del programa */
@@ -201,6 +203,7 @@ void activator(TCB* next){
     printf("mythread_free: After setcontext, should never get here!!...\n");  
   }
   disable_interrupt();
+  /* Si el hilo que va a salir no ha terminado su ejecución */
   enqueue(cola, prevrunning);
   enable_interrupt();
   printf("*** SWAPCONTEXT FROM %i TO %i\n", prevrunning->tid,running->tid);
