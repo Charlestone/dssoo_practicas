@@ -110,7 +110,9 @@ int mythread_create (void (*fun_addr)(),int priority)
   t_state[i].run_env.uc_stack.ss_flags = 0;
   makecontext(&t_state[i].run_env, fun_addr, 1); 
   /* Encolamos los hilos a medida que se van creando */
+  disable_interrupt();
   enqueue(cola, &t_state[i]);
+  enable_interrupt();
   return i;
 } /****** End my_thread_create() ******/
 
