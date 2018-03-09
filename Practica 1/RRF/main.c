@@ -63,21 +63,23 @@ int main(int argc, char *argv[])
 {
   int i,j,k,l,m,a,b=0;
 
-  mythread_setpriority(HIGH_PRIORITY);
+  mythread_setpriority(LOW_PRIORITY);
   read_network();
   if((i = mythread_create(fun1,LOW_PRIORITY)) == -1){
     printf("thread failed to initialize\n");
     exit(-1);
   }
- read_network();
+  read_network();
   if((j = mythread_create(fun2,LOW_PRIORITY)) == -1){
     printf("thread failed to initialize\n");
     exit(-1);
   }
+  
   if((k = mythread_create(fun3,LOW_PRIORITY)) == -1){
     printf("thread failed to initialize\n");
     exit(-1);
-  }  
+  }
+
   if((l = mythread_create(fun1,HIGH_PRIORITY)) == -1){
     printf("thread failed to initialize\n");
     exit(-1);
@@ -93,7 +95,6 @@ int main(int argc, char *argv[])
   //    printf ("Thread %d with priority %d\t from fun2 a = %d\tb = %d\n", mythread_gettid(), mythread_getpriority(), a, b);
      for (b=0; b<30000000; ++b);
   }	
- 
   if((a =  mythread_create(fun1,HIGH_PRIORITY)) == -1){
     printf("thread failed to initialize\n");
     exit(-1);
