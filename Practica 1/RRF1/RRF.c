@@ -78,8 +78,6 @@ void init_mythreadlib() {
   disable_interrupt();
   colaA = queue_new();
   colaB = queue_new();
-  /* Encolamos el idle */
-  enqueue(colaB,&idle);
   enable_interrupt();
 }
 
@@ -177,14 +175,26 @@ int mythread_gettid(){
 TCB* scheduler(){
   disable_interrupt();
   TCB* aux;
+  /* Si hay un hilo de alta prioridad listo */
   if (!queue_empty(colaA))
   {
+    /* Lo desencolamos */
     aux = dequeue(colaA);
   } else {
-    aux = dequeue(colaB);
-    if(aux->state == 3){
-      enqueue(colaB, aux);
+    /* Si no */
+    if (!queue_empty(colaB))
+    {
+      /* Desencolamos el siguiente listo de prioridad baja */
       aux = dequeue(colaB);
+    } else {
+      /* Si no quedan más hilos en la cola y el hilo que se está ejecutando no ha terminado */
+      if(running->state == 1) {
+        /* Devolvemos el hilo que se está ejecutando */
+        aux = running;
+      } else {
+        /* Si el hilo en ejecución ha terminado y no quedan más, se devuelve el idle */
+        aux = &idle;
+      }
     }
   }
   enable_interrupt();
