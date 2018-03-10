@@ -76,8 +76,6 @@ void init_mythreadlib() {
   /* Initialize queue */
   disable_interrupt();
   cola = queue_new();
-  /* Encolamos el idle */
-  enqueue(cola,&idle);
   enable_interrupt();
 }
 
@@ -163,11 +161,11 @@ int mythread_gettid(){
 /* RR sin prioridad */
 TCB* scheduler(){
   disable_interrupt();
-  TCB* aux = dequeue(cola);
-  if(aux->state == 3){
-    enqueue(cola, aux);
-    aux = dequeue(cola);
+  if(queue_empty(cola)) {
+    enable_interrupt();
+    return &idle;
   }
+  TCB* aux = dequeue(cola);
   enable_interrupt();
   return aux;
   printf("mythread_free: No thread in the system\nExiting...\n");	
