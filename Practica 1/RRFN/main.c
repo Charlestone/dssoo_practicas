@@ -32,12 +32,8 @@ void fun2 (int global_index)
   read_network();
   for (a=0; a<10; ++a) {
   //  printf ("Thread %d with priority %d\t from fun2 a = %d\tb = %d\n", mythread_gettid(), mythread_getpriority(), a, b);
-    for (b=0; b<18000000; ++b);
   }
-  for (a=0; a<10; ++a) {
-  //  printf ("Thread %d with priority %d\t from fun2 a = %d\tb = %d\n", mythread_gettid(), mythread_getpriority(), a, b);
-    for (b=0; b<18000000; ++b);
-  }
+  
   mythread_exit();
   return;
 }
