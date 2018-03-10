@@ -212,8 +212,11 @@ void activator(TCB* next){
     printf("mythread_free: After setcontext, should never get here!!...\n");  
   }
   disable_interrupt();
-  /* Si el hilo que va a salir no ha terminado su ejecución */
-  enqueue(cola, prevrunning);
+  /* Si el hilo que va a salir no ha terminado su ejecución y no es el mismo que estaba ejecutandose */
+  if(prevrunning->tid != running->tid) {
+    /* Lo encolamos */
+    enqueue(cola, prevrunning);
+  }
   enable_interrupt();
   printf("*** SWAPCONTEXT FROM %i TO %i\n", prevrunning->tid,running->tid);
   swapcontext(&(prevrunning->run_env),&(next->run_env));
