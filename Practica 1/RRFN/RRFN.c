@@ -33,6 +33,7 @@ static void idle_function(){
 /* Colas de distintas prioridadesa */
 static struct queue* colaA;
 static struct queue* colaB;
+static struct queue* colaW;
 
 /* Initialize the thread library */
 void init_mythreadlib() {
@@ -78,6 +79,7 @@ void init_mythreadlib() {
   disable_interrupt();
   colaA = queue_new();
   colaB = queue_new();
+  colaW = queue_new();
   enable_interrupt();
 }
 
@@ -130,12 +132,26 @@ int mythread_create (void (*fun_addr)(),int priority)
 /* Read network syscall */
 int read_network()
 {
-   return 1;
+  running->state = WAITING;
+  TCB* next = scheduler();
+  activator(next);
+  return 1;
 }
 
 /* Network interrupt  */
 void network_interrupt(int sig)
 {
+  disable_interrupt();
+  TCB* aux;
+  if(!queue_empty(colaW)) {
+    aux = dequeue(colaW);
+    if(aux->priority == 0){
+      enqueue(colaB, aux);
+    } else {
+      enqueue(colaA, aux);
+    }
+  }
+  enable_interrupt();
 } 
 
 
@@ -225,32 +241,49 @@ void activator(TCB* next){
   TCB* prevrunning = running;
   running = next;
   current = next->tid;
+  disable_interrupt();
   /* Se comprueba si el hilo que se va a ejecutar es el idle */
-  if(running->state == 3){
+  if(running->state == 3 && queue_empty(colaW)){
     printf("*** FINISH\n");
     /* Se debería salir del programa */
     exit(0);
   }
-  /* Comprobamos si el hilo que va a ser expulsado ha terminado su ejecución */
-  if(!prevrunning->state) {
+  /* Si el hilo que va a ser expulsado ha terminado su ejecución */
+  if(prevrunning->state == 0) {
     printf("*** THREAD %i TERMINATED: SETCONTEXT OF %i\n", prevrunning->tid,running->tid);
+    /* Se establece el contexto del que se va a ejecutar */
+    enable_interrupt();
     setcontext(&(next->run_env));
     printf("mythread_free: After setcontext, should never get here!!...\n");  
   }
-  disable_interrupt();
-  /* Si el hilo que va a salir no ha terminado su ejecución y no es el mismo que estaba ejecutandose */
-  if(prevrunning->tid != running->tid) {
-    /* Lo encolamos */
-    enqueue(colaB, prevrunning);
+  /* Si el hilo que va a ser expulsado está bloqueado por una llamada a red */
+  if(prevrunning->state == 2) {
+    /* Se encola el proceso bloqueado */
+    enqueue(colaW, prevrunning);
+    printf("*** THREAD %i READ FROM NETWORK\n",prevrunning->tid);
+  } else {
+    /* Si el hilo que va a salir no ha terminado su ejecución y no es el mismo que estaba ejecutandose */
+    if((prevrunning->tid != running->tid) && prevrunning->tid != -1) {
+      /* Lo encolamos */
+      enqueue(colaB, prevrunning);
+      /* Solo encolaremos de nuevo los hilos que sean de baja prioridad, porque los de alta siguen un FIFO y no hay cambios de contexto voluntarios */
+    }
   }
-  /* Solo encolaremos de nuevo los hilos que sean de baja prioridad, porque los de alta siguen un FIFO y no hay cambios de contexto voluntarios */
   enable_interrupt();
+  /* Si se explusa un hilo por otro de mayor prioridad */
   if (prevrunning->priority == 0 && running->priority == 1)
   {
     printf("*** THREAD %i PREEMTED: SETCONTEXT OF %i\n", prevrunning->tid,running->tid);
   } else {
-    printf("*** SWAPCONTEXT FROM %i TO %i\n", prevrunning->tid,running->tid);
+    if(prevrunning->priority == 2) {
+      printf("*** THREAD READY: SET CONTEXT TO %i\n",running->tid);
+    } else {
+      /* Si se explusa un hilo por otro de igual o menor prioridad */
+      printf("*** SWAPCONTEXT FROM %i TO %i\n", prevrunning->tid,running->tid);
+    }
+    
   }
+  /* Se cambia de contexto */
   swapcontext(&(prevrunning->run_env),&(next->run_env));
   //printf("mythread_free: After setcontext, should never get here!!...\n");  
 }
