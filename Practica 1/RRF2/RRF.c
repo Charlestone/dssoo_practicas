@@ -238,9 +238,12 @@ void activator(TCB* next){
     printf("mythread_free: After setcontext, should never get here!!...\n");  
   }
   disable_interrupt();
-  /* Si el hilo que va a salir no ha terminado su ejecución, se le encola de nuevo */
-  enqueue(colaB, prevrunning);
-  /* Solo encolaremos de nuevo los hilos que sean de baja prioridad, porque los de alta siguen un FIFO */
+  /* Si el hilo que va a salir no ha terminado su ejecución y no es el mismo que estaba ejecutandose */
+  if(prevrunning->tid != running->tid) {
+    /* Lo encolamos */
+    enqueue(colaB, prevrunning);
+  }
+  /* Solo encolaremos de nuevo los hilos que sean de baja prioridad, porque los de alta siguen un FIFO y no hay cambios de contexto voluntarios */
   enable_interrupt();
   if (prevrunning->priority == 0 && running->priority == 1)
   {
