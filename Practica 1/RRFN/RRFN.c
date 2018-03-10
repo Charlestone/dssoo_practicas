@@ -33,6 +33,7 @@ static void idle_function(){
 /* Colas de distintas prioridadesa */
 static struct queue* colaA;
 static struct queue* colaB;
+static struct queue* colaW;
 
 /* Initialize the thread library */
 void init_mythreadlib() {
