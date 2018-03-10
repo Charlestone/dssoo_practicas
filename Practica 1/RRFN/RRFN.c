@@ -33,7 +33,6 @@ static void idle_function(){
 /* Colas de distintas prioridadesa */
 static struct queue* colaA;
 static struct queue* colaB;
-static struct queue* colaW;
 
 /* Initialize the thread library */
 void init_mythreadlib() {
@@ -79,8 +78,6 @@ void init_mythreadlib() {
   disable_interrupt();
   colaA = queue_new();
   colaB = queue_new();
-  /* Encolamos el idle */
-  enqueue(colaB,&idle);
   enable_interrupt();
 }
 
@@ -178,14 +175,26 @@ int mythread_gettid(){
 TCB* scheduler(){
   disable_interrupt();
   TCB* aux;
+  /* Si hay un hilo de alta prioridad listo */
   if (!queue_empty(colaA))
   {
+    /* Lo desencolamos */
     aux = dequeue(colaA);
   } else {
-    aux = dequeue(colaB);
-    if(aux->state == 3){
-      enqueue(colaB, aux);
+    /* Si no */
+    if (!queue_empty(colaB))
+    {
+      /* Desencolamos el siguiente listo de prioridad baja */
       aux = dequeue(colaB);
+    } else {
+      /* Si no quedan más hilos en la cola y el hilo que se está ejecutando no ha terminado */
+      if(running->state == 1) {
+        /* Devolvemos el hilo que se está ejecutando */
+        aux = running;
+      } else {
+        /* Si el hilo en ejecución ha terminado y no quedan más, se devuelve el idle */
+        aux = &idle;
+      }
     }
   }
   enable_interrupt();
@@ -229,9 +238,12 @@ void activator(TCB* next){
     printf("mythread_free: After setcontext, should never get here!!...\n");  
   }
   disable_interrupt();
-  /* Si el hilo que va a salir no ha terminado su ejecución, se le encola de nuevo */
-  enqueue(colaB, prevrunning);
-  /* Solo encolaremos de nuevo los hilos que sean de baja prioridad, porque los de alta siguen un FIFO */
+  /* Si el hilo que va a salir no ha terminado su ejecución y no es el mismo que estaba ejecutandose */
+  if(prevrunning->tid != running->tid) {
+    /* Lo encolamos */
+    enqueue(colaB, prevrunning);
+  }
+  /* Solo encolaremos de nuevo los hilos que sean de baja prioridad, porque los de alta siguen un FIFO y no hay cambios de contexto voluntarios */
   enable_interrupt();
   if (prevrunning->priority == 0 && running->priority == 1)
   {
