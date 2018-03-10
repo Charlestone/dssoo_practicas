@@ -161,11 +161,14 @@ int mythread_gettid(){
 /* RR sin prioridad */
 TCB* scheduler(){
   disable_interrupt();
+  TCB* aux;
+  /* Si la cola está vacía, se devuelve el idle */
   if(queue_empty(cola)) {
-    enable_interrupt();
-    return &idle;
+    aux = &idle;    
+  } else {
+    /* Si no, se desencola el siguiente */
+    aux = dequeue(cola);
   }
-  TCB* aux = dequeue(cola);
   enable_interrupt();
   return aux;
   printf("mythread_free: No thread in the system\nExiting...\n");	
