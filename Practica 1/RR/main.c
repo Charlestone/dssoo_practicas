@@ -44,7 +44,7 @@ void fun3 (int global_index)
     //printf ("Thread %d with priority %d\t from fun2 a = %d\tb = %d\n", mythread_gettid(), mythread_getpriority(), a, b);
     for (b=0; b<40000000; ++b);
   }
-  for (a=0; a<10; ++a) {
+  for (a=0; a<20; ++a) {
     //printf ("Thread %d with priority %d\t from fun2 a = %d\tb = %d\n", mythread_gettid(), mythread_getpriority(), a, b);
     for (b=0; b<40000000; ++b);
   }
