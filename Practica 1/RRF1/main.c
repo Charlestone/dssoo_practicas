@@ -32,12 +32,8 @@ void fun2 (int global_index)
   read_network();
   for (a=0; a<10; ++a) {
   //  printf ("Thread %d with priority %d\t from fun2 a = %d\tb = %d\n", mythread_gettid(), mythread_getpriority(), a, b);
-    for (b=0; b<18000000; ++b);
   }
-  for (a=0; a<10; ++a) {
-  //  printf ("Thread %d with priority %d\t from fun2 a = %d\tb = %d\n", mythread_gettid(), mythread_getpriority(), a, b);
-    for (b=0; b<18000000; ++b);
-  }
+  
   mythread_exit();
   return;
 }
@@ -95,11 +91,11 @@ int main(int argc, char *argv[])
   //    printf ("Thread %d with priority %d\t from fun2 a = %d\tb = %d\n", mythread_gettid(), mythread_getpriority(), a, b);
      for (b=0; b<30000000; ++b);
   }	
-  if((a =  mythread_create(fun1,HIGH_PRIORITY)) == -1){
+  if((a =  mythread_create(fun2,HIGH_PRIORITY)) == -1){
     printf("thread failed to initialize\n");
     exit(-1);
   }
-  if((b =  mythread_create(fun1,HIGH_PRIORITY)) == -1){
+  if((b =  mythread_create(fun3,HIGH_PRIORITY)) == -1){
     printf("thread failed to initialize\n");
     exit(-1);
   }
