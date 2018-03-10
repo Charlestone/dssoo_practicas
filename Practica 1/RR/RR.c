@@ -162,9 +162,15 @@ int mythread_gettid(){
 TCB* scheduler(){
   disable_interrupt();
   TCB* aux;
-  /* Si la cola está vacía, se devuelve el idle */
+  /* Si la cola está vacía y el hilo en ejecución no ha terminado */
   if(queue_empty(cola)) {
-    aux = &idle;    
+    if(running->state == 1) {
+        /* Devolvemos el hilo que se está ejecutando */
+        aux = running;
+      } else {
+        /* Si el hilo en ejecución ha terminado y no quedan más, se devuelve el idle */
+        aux = &idle;
+      }   
   } else {
     /* Si no, se desencola el siguiente */
     aux = dequeue(cola);
