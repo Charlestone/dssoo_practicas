@@ -121,7 +121,6 @@ int mythread_create (void (*fun_addr)(),int priority)
        TCB* new = scheduler();   
       activator(new);
      } 
-    
   } else {
     enqueue(colaB, &t_state[i]);
   }
@@ -152,6 +151,8 @@ void network_interrupt(int sig)
     }
   }
   enable_interrupt();
+  TCB* next = scheduler();
+  activator(next);
 } 
 
 
@@ -190,26 +191,29 @@ int mythread_gettid(){
 /* RR sin prioridad */
 TCB* scheduler(){
   disable_interrupt();
-  TCB* aux;
-  /* Si hay un hilo de alta prioridad listo */
-  if (!queue_empty(colaA))
-  {
-    /* Lo desencolamos */
-    aux = dequeue(colaA);
-  } else {
-    /* Si no */
-    if (!queue_empty(colaB))
+  TCB* aux = running;
+  /* Si el hilo que está en ejecución en de alta prioridad, será el próximo a ejecutar */
+  if(running->priority != 1) {
+    /* Si hay un hilo de alta prioridad listo */
+    if (!queue_empty(colaA))
     {
-      /* Desencolamos el siguiente listo de prioridad baja */
-      aux = dequeue(colaB);
+      /* Lo desencolamos */
+      aux = dequeue(colaA);
     } else {
-      /* Si no quedan más hilos en la cola y el hilo que se está ejecutando no ha terminado */
-      if(running->state == 1) {
-        /* Devolvemos el hilo que se está ejecutando */
-        aux = running;
+      /* Si no */
+      if (!queue_empty(colaB))
+      {
+        /* Desencolamos el siguiente listo de prioridad baja */
+        aux = dequeue(colaB);
       } else {
-        /* Si el hilo en ejecución ha terminado y no quedan más, se devuelve el idle */
-        aux = &idle;
+        /* Si no quedan más hilos en la cola y el hilo que se está ejecutando no ha terminado */
+        if(running->state == 1) {
+          /* Devolvemos el hilo que se está ejecutando */
+          aux = running;
+        } else {
+          /* Si el hilo en ejecución ha terminado y no quedan más, se devuelve el idle */
+          aux = &idle;
+        }
       }
     }
   }
