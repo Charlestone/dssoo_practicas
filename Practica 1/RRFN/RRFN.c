@@ -124,7 +124,6 @@ int mythread_create (void (*fun_addr)(),int priority)
   } else {
     enqueue(colaB, &t_state[i]);
   }
-  
   return i;
 } /****** End my_thread_create() ******/
 
@@ -142,18 +141,26 @@ void network_interrupt(int sig)
 {
   disable_interrupt();
   TCB* aux;
+  /* Si hay algún hilo esperando */
   if(!queue_empty(colaW)) {
+    /* Se desencola */
     aux = dequeue(colaW);
+    /* Y se le cambia a estado listo */
     aux->state = INIT;
+    /* Después se le encola donde corresponda */
     if(aux->priority == 0){
       enqueue(colaB, aux);
     } else {
       enqueue(colaA, aux);
     }
+    printf("*** THREAD %d READY\n", aux->tid);
+    enable_interrupt();
+    TCB* next = scheduler();
+    activator(next);
+  } else {
+    enable_interrupt();
   }
-  enable_interrupt();
-  TCB* next = scheduler();
-  activator(next);
+  
 } 
 
 
@@ -193,8 +200,8 @@ int mythread_gettid(){
 TCB* scheduler(){
   disable_interrupt();
   TCB* aux;
-  /* Si el hilo que está en ejecución en de alta prioridad, será el próximo a ejecutar */
-  if(running->priority != 1 || running->state == 0) {
+  /* Si el hilo que está en ejecución es de alta prioridad y no ha terminado, será el próximo a ejecutar */
+  if(running->priority != 1 || running->state != 1) {
     /* Si hay un hilo de alta prioridad listo */
     if (!queue_empty(colaA))
     {
@@ -204,7 +211,7 @@ TCB* scheduler(){
       /* Si no y hay algún hilo de baja prioridad por ejecutar*/
       if (!queue_empty(colaB))
       { /* Se comprueba si el hilo en ejecución ha terminado su rodaja */
-        if (running->ticks == 0)
+        if (running->priority != 0 || (running->ticks == 0 || running->state != 1) )
         {/* Desencolamos el siguiente listo de prioridad baja */
           aux = dequeue(colaB);
         } else {
@@ -260,15 +267,15 @@ void activator(TCB* next){
   }
   
   disable_interrupt();
-  /* Se comprueba si el hilo que se va a ejecutar es el idle */
-  if(running->state == 3 && queue_empty(colaW)){
+  /* Se comprueba si el hilo que se va a ejecutar es el idle y no quedan hilos listos ni esperando*/
+  if(next->state == 3 && queue_empty(colaW) && prevrunning->state != 2){
     printf("*** FINISH\n");
     /* Se debería salir del programa */
     exit(0);
   }
   /* Si el hilo que va a ser expulsado ha terminado su ejecución */
   if(prevrunning->state == 0) {
-    printf("*** THREAD %i TERMINATED: SETCONTEXT OF %i\n", prevrunning->tid,running->tid);
+    printf("*** THREAD %i TERMINATED: SETCONTEXT OF %i\n", prevrunning->tid,next->tid);
     /* Se establece el contexto del que se va a ejecutar */
     enable_interrupt();
     setcontext(&(next->run_env));
@@ -281,7 +288,7 @@ void activator(TCB* next){
     printf("*** THREAD %i READ FROM NETWORK\n",prevrunning->tid);
   } else {
     /* Si el hilo que va a salir no ha terminado su ejecución y no es el mismo que estaba ejecutandose */
-    if((prevrunning->tid != running->tid) && prevrunning->tid != -1) {
+    if((prevrunning->tid != next->tid) && prevrunning->tid != -1) {
       /* Lo encolamos */
       enqueue(colaB, prevrunning);
       /* Solo encolaremos de nuevo los hilos que sean de baja prioridad, porque los de alta siguen un FIFO y no hay cambios de contexto voluntarios */
@@ -289,15 +296,15 @@ void activator(TCB* next){
   }
   enable_interrupt();
   /* Si se explusa un hilo por otro de mayor prioridad */
-  if (prevrunning->priority == 0 && running->priority == 1)
+  if (prevrunning->priority == 0 && next->priority == 1)
   {
-    printf("*** THREAD %i PREEMTED: SETCONTEXT OF %i\n", prevrunning->tid,running->tid);
+    printf("*** THREAD %i PREEMTED: SETCONTEXT OF %i\n", prevrunning->tid,next->tid);
   } else {
     if(prevrunning->priority == 2) {
-      printf("*** THREAD READY: SET CONTEXT TO %i\n",running->tid);
+      printf("*** THREAD READY: SET CONTEXT TO %i\n",next->tid);
     } else {
       /* Si se explusa un hilo por otro de igual o menor prioridad */
-      printf("*** SWAPCONTEXT FROM %i TO %i\n", prevrunning->tid,running->tid);
+      printf("*** SWAPCONTEXT FROM %i TO %i\n", prevrunning->tid,next->tid);
     }
     
   }
