@@ -212,7 +212,6 @@ void timer_interrupt(int sig)
     running->ticks--;
     /* Comprobamos si el hilo en ejecución ha terminado su cuanto */
     if(running->ticks == 0) {
-      running->ticks = QUANTUM_TICKS;
       TCB* aux = scheduler();
       activator(aux);
     }
@@ -225,6 +224,12 @@ void activator(TCB* next){
   TCB* prevrunning = running;
   running = next;
   current = next->tid;
+  /* Si el hilo en ejecución ha terminado su cuanto*/
+  if (prevrunning->ticks == 0)
+  {
+    /* Se restablece el cuanto */
+  prevrunning->ticks = QUANTUM_TICKS;
+  }
   /* Se comprueba si el hilo que se va a ejecutar es el idle */
   if(running->state == 3){
     printf("*** FINISH\n");
