@@ -144,6 +144,7 @@ void network_interrupt(int sig)
   TCB* aux;
   if(!queue_empty(colaW)) {
     aux = dequeue(colaW);
+    aux->state = INIT;
     if(aux->priority == 0){
       enqueue(colaB, aux);
     } else {
@@ -191,22 +192,27 @@ int mythread_gettid(){
 /* RR sin prioridad */
 TCB* scheduler(){
   disable_interrupt();
-  TCB* aux = running;
+  TCB* aux;
   /* Si el hilo que está en ejecución en de alta prioridad, será el próximo a ejecutar */
-  if(running->priority != 1) {
+  if(running->priority != 1 || running->state == 0) {
     /* Si hay un hilo de alta prioridad listo */
     if (!queue_empty(colaA))
     {
       /* Lo desencolamos */
       aux = dequeue(colaA);
     } else {
-      /* Si no */
+      /* Si no y hay algún hilo de baja prioridad por ejecutar*/
       if (!queue_empty(colaB))
-      {
-        /* Desencolamos el siguiente listo de prioridad baja */
-        aux = dequeue(colaB);
+      { /* Se comprueba si el hilo en ejecución ha terminado su rodaja */
+        if (running->ticks == 0)
+        {/* Desencolamos el siguiente listo de prioridad baja */
+          aux = dequeue(colaB);
+        } else {
+          /* Si no ha terminado su rodaja, el hilo sigue ejecutandose porque no hay hilos de alta prioridad que esté listo */
+          aux = running;
+        }
       } else {
-        /* Si no quedan más hilos en la cola y el hilo que se está ejecutando no ha terminado */
+        /* Si no quedan más hilos en las colas y el hilo que se está ejecutando no ha terminado */
         if(running->state == 1) {
           /* Devolvemos el hilo que se está ejecutando */
           aux = running;
@@ -216,6 +222,8 @@ TCB* scheduler(){
         }
       }
     }
+  } else {
+    aux = running;
   }
   enable_interrupt();
   return aux;
@@ -232,7 +240,6 @@ void timer_interrupt(int sig)
     running->ticks--;
     /* Comprobamos si el hilo en ejecución ha terminado su cuanto */
     if(running->ticks == 0) {
-      running->ticks = QUANTUM_TICKS;
       TCB* aux = scheduler();
       activator(aux);
     }
@@ -245,6 +252,13 @@ void activator(TCB* next){
   TCB* prevrunning = running;
   running = next;
   current = next->tid;
+  /* Si el hilo en ejecución ha terminado su cuanto*/
+  if (prevrunning->ticks == 0)
+  {
+    /* Se restablece el cuanto */
+  prevrunning->ticks = QUANTUM_TICKS;
+  }
+  
   disable_interrupt();
   /* Se comprueba si el hilo que se va a ejecutar es el idle */
   if(running->state == 3 && queue_empty(colaW)){
