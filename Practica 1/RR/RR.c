@@ -207,18 +207,18 @@ void activator(TCB* next){
   }
   /* Comprobamos si el hilo que va a ser expulsado ha terminado su ejecución */
   if(!prevrunning->state) {
-    printf("*** THREAD %i TERMINATED: SETCONTEXT OF %i\n", prevrunning->tid,running->tid);
+    printf("*** THREAD %i TERMINATED: SETCONTEXT OF %i\n", prevrunning->tid,current);
     setcontext(&(next->run_env));
     printf("mythread_free: After setcontext, should never get here!!...\n");  
   }
   disable_interrupt();
   /* Si el hilo que va a salir no ha terminado su ejecución y no es el mismo que estaba ejecutandose */
-  if(prevrunning->tid != running->tid) {
+  if(prevrunning->tid != current) {
     /* Lo encolamos */
     enqueue(cola, prevrunning);
   }
   enable_interrupt();
-  printf("*** SWAPCONTEXT FROM %i TO %i\n", prevrunning->tid,running->tid);
-  swapcontext(&(prevrunning->run_env),&(next->run_env));
+  printf("*** SWAPCONTEXT FROM %i TO %i\n", prevrunning->tid,current);
+  swapcontext(&(prevrunning->run_env),&(running->run_env));
   //printf("mythread_free: After setcontext, should never get here!!...\n");	
 }

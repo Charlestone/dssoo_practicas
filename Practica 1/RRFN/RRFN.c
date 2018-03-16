@@ -268,17 +268,17 @@ void activator(TCB* next){
   
   disable_interrupt();
   /* Se comprueba si el hilo que se va a ejecutar es el idle y no quedan hilos listos ni esperando*/
-  if(next->state == 3 && queue_empty(colaW) && prevrunning->state != 2){
+  if(running->state == 3 && queue_empty(colaW) && prevrunning->state != 2){
     printf("*** FINISH\n");
     /* Se debería salir del programa */
     exit(0);
   }
   /* Si el hilo que va a ser expulsado ha terminado su ejecución */
   if(prevrunning->state == 0) {
-    printf("*** THREAD %i TERMINATED: SETCONTEXT OF %i\n", prevrunning->tid,next->tid);
+    printf("*** THREAD %i TERMINATED: SETCONTEXT OF %i\n", prevrunning->tid,current);
     /* Se establece el contexto del que se va a ejecutar */
     enable_interrupt();
-    setcontext(&(next->run_env));
+    setcontext(&(running->run_env));
     printf("mythread_free: After setcontext, should never get here!!...\n");  
   }
   /* Si el hilo que va a ser expulsado está bloqueado por una llamada a red */
@@ -288,7 +288,7 @@ void activator(TCB* next){
     printf("*** THREAD %i READ FROM NETWORK\n",prevrunning->tid);
   } else {
     /* Si el hilo que va a salir no ha terminado su ejecución y no es el mismo que estaba ejecutandose */
-    if((prevrunning->tid != next->tid) && prevrunning->tid != -1) {
+    if((prevrunning->tid != current) && prevrunning->tid != -1) {
       /* Lo encolamos */
       enqueue(colaB, prevrunning);
       /* Solo encolaremos de nuevo los hilos que sean de baja prioridad, porque los de alta siguen un FIFO y no hay cambios de contexto voluntarios */
@@ -296,19 +296,19 @@ void activator(TCB* next){
   }
   enable_interrupt();
   /* Si se explusa un hilo por otro de mayor prioridad */
-  if (prevrunning->priority == 0 && next->priority == 1)
+  if (prevrunning->priority == 0 && running->priority == 1)
   {
-    printf("*** THREAD %i PREEMTED: SETCONTEXT OF %i\n", prevrunning->tid,next->tid);
+    printf("*** THREAD %i PREEMTED: SETCONTEXT OF %i\n", prevrunning->tid,current);
   } else {
     if(prevrunning->priority == 2) {
-      printf("*** THREAD READY: SET CONTEXT TO %i\n",next->tid);
+      printf("*** THREAD READY: SET CONTEXT TO %i\n",current);
     } else {
       /* Si se explusa un hilo por otro de igual o menor prioridad */
-      printf("*** SWAPCONTEXT FROM %i TO %i\n", prevrunning->tid,next->tid);
+      printf("*** SWAPCONTEXT FROM %i TO %i\n", prevrunning->tid,current);
     }
     
   }
   /* Se cambia de contexto */
-  swapcontext(&(prevrunning->run_env),&(next->run_env));
+  swapcontext(&(prevrunning->run_env),&(running->run_env));
   //printf("mythread_free: After setcontext, should never get here!!...\n");  
 }
