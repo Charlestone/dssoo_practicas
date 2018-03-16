@@ -171,7 +171,7 @@ int mythread_gettid(){
 }
 
 
-/* RR sin prioridad */
+/* RR con prioridad */
 TCB* scheduler(){
   disable_interrupt();
   TCB* aux;
