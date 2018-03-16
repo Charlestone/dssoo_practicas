@@ -28,8 +28,15 @@ static int init=0;
 /* Thread control block for the idle thread */
 static TCB idle;
 static void idle_function(){
-  while(1);
-}
+  while(1){
+    disable_interrupt();
+    if (queue_empty(colaA) || queue_empty(colaB))
+    {
+     TCB* next = scheduler();
+     activator(next); 
+    }
+    enable_interrupt();
+};
 /* Colas de distintas prioridadesa */
 static struct queue* colaA;
 static struct queue* colaB;
@@ -156,8 +163,6 @@ void network_interrupt(int sig)
     }
     printf("*** THREAD %d READY\n", aux->tid);
     enable_interrupt();
-    TCB* next = scheduler();
-    activator(next);
   } else {
     enable_interrupt();
   }
@@ -197,7 +202,7 @@ int mythread_gettid(){
 }
 
 
-/* RR sin prioridad */
+/* RR con prioridad y con cambios de contexto voluntarios */
 TCB* scheduler(){
   disable_interrupt();
   TCB* aux;
