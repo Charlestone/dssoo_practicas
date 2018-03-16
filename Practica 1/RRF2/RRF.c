@@ -112,7 +112,9 @@ int mythread_create (void (*fun_addr)(),int priority)
   /* Encolamos los hilo a medida que se van creando según su prioridad */
   if (priority == 1) {
     /* Si el hilo es de alta prioridad */
+    disable_interrupt();
     enqueue(colaA, &t_state[i]);
+    enable_interrupt();
     /* Se comprueba si el hilo ejecutandose es de baja prioridad, para llamar al planificador */
     if (running->priority == 0)
      {
@@ -121,7 +123,9 @@ int mythread_create (void (*fun_addr)(),int priority)
      } 
     
   } else {
+    disable_interrupt();
     enqueue(colaB, &t_state[i]);
+    enable_interrupt();
   }
   
   return i;

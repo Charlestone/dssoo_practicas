@@ -28,15 +28,7 @@ static int init=0;
 /* Thread control block for the idle thread */
 static TCB idle;
 static void idle_function(){
-  while(1){
-    disable_interrupt();
-    if (queue_empty(colaA) || queue_empty(colaB))
-    {
-     TCB* next = scheduler();
-     activator(next); 
-    }
-    enable_interrupt();
-  }
+  while(1);
 }
 /* Colas de distintas prioridadesa */
 static struct queue* colaA;
@@ -122,7 +114,9 @@ int mythread_create (void (*fun_addr)(),int priority)
   /* Encolamos los hilo a medida que se van creando según su prioridad */
   if (priority == 1) {
     /* Si el hilo es de alta prioridad */
+    disable_interrupt();
     enqueue(colaA, &t_state[i]);
+    enable_interrupt();
     /* Se comprueba si el hilo ejecutandose es de baja prioridad, para llamar al planificador */
     if (running->priority == 0)
      {
@@ -130,7 +124,9 @@ int mythread_create (void (*fun_addr)(),int priority)
       activator(new);
      } 
   } else {
+    disable_interrupt();
     enqueue(colaB, &t_state[i]);
+    enable_interrupt();
   }
   return i;
 } /****** End my_thread_create() ******/
@@ -163,6 +159,8 @@ void network_interrupt(int sig)
       enqueue(colaA, aux);
     }
     printf("*** THREAD %d READY\n", aux->tid);
+    TCB* next = scheduler();
+    activator(next);
     enable_interrupt();
   } else {
     enable_interrupt();
