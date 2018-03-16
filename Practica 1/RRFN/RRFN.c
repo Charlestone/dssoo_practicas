@@ -259,13 +259,6 @@ void activator(TCB* next){
   TCB* prevrunning = running;
   running = next;
   current = next->tid;
-  /* Si el hilo en ejecución ha terminado su cuanto*/
-  if (prevrunning->ticks == 0)
-  {
-    /* Se restablece el cuanto */
-  prevrunning->ticks = QUANTUM_TICKS;
-  }
-  
   disable_interrupt();
   /* Se comprueba si el hilo que se va a ejecutar es el idle y no quedan hilos listos ni esperando*/
   if(running->state == 3 && queue_empty(colaW) && prevrunning->state != 2){
@@ -284,12 +277,14 @@ void activator(TCB* next){
   /* Si el hilo que va a ser expulsado está bloqueado por una llamada a red */
   if(prevrunning->state == 2) {
     /* Se encola el proceso bloqueado */
+    prevrunning->ticks = QUANTUM_TICKS;
     enqueue(colaW, prevrunning);
     printf("*** THREAD %i READ FROM NETWORK\n",prevrunning->tid);
   } else {
     /* Si el hilo que va a salir no ha terminado su ejecución y no es el mismo que estaba ejecutandose */
     if((prevrunning->tid != current) && prevrunning->tid != -1) {
       /* Lo encolamos */
+      prevrunning->ticks = QUANTUM_TICKS;
       enqueue(colaB, prevrunning);
       /* Solo encolaremos de nuevo los hilos que sean de baja prioridad, porque los de alta siguen un FIFO y no hay cambios de contexto voluntarios */
     }
