@@ -145,8 +145,9 @@ void network_interrupt(int sig)
   if(!queue_empty(colaW)) {
     /* Se desencola */
     aux = dequeue(colaW);
-    /* Y se le cambia a estado listo */
+    /* Y se le cambia a estado listo y se le reestablece el cuanto */
     aux->state = INIT;
+    aux->ticks = QUANTUM_TICKS;
     /* Después se le encola donde corresponda */
     if(aux->priority == 0){
       enqueue(colaB, aux);
@@ -277,7 +278,6 @@ void activator(TCB* next){
   /* Si el hilo que va a ser expulsado está bloqueado por una llamada a red */
   if(prevrunning->state == 2) {
     /* Se encola el proceso bloqueado */
-    prevrunning->ticks = QUANTUM_TICKS;
     enqueue(colaW, prevrunning);
     printf("*** THREAD %i READ FROM NETWORK\n",prevrunning->tid);
   } else {
