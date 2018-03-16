@@ -36,7 +36,8 @@ static void idle_function(){
      activator(next); 
     }
     enable_interrupt();
-};
+  }
+}
 /* Colas de distintas prioridadesa */
 static struct queue* colaA;
 static struct queue* colaB;
