@@ -264,6 +264,10 @@ void activator(TCB* next){
   TCB* prevrunning = running;
   running = next;
   current = next->tid;
+  if (prevrunning->ticks == 0)
+  {
+    prevrunning->ticks = QUANTUM_TICKS;
+  }
   disable_interrupt();
   /* Se comprueba si el hilo que se va a ejecutar es el idle y no quedan hilos listos ni esperando*/
   if(running->state == 3 && queue_empty(colaW) && prevrunning->state != 2){
@@ -285,7 +289,6 @@ void activator(TCB* next){
     enqueue(colaW, prevrunning);
     printf("*** THREAD %i READ FROM NETWORK\n",prevrunning->tid);
   } else {
-    prevrunning->ticks = QUANTUM_TICKS;
     /* Si el hilo que va a salir no ha terminado su ejecución y no es el mismo que estaba ejecutandose */
     if((prevrunning->tid != current) && prevrunning->tid != -1) {
       /* Lo encolamos */

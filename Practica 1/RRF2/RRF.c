@@ -228,6 +228,10 @@ void activator(TCB* next){
   TCB* prevrunning = running;
   running = next;
   current = next->tid;
+  if (prevrunning->ticks == 0)
+  {
+    prevrunning->ticks = QUANTUM_TICKS;
+  }
   /* Se comprueba si el hilo que se va a ejecutar es el idle */
   if(running->state == 3){
     printf("*** FINISH\n");
@@ -244,7 +248,6 @@ void activator(TCB* next){
   /* Si el hilo que va a salir no ha terminado su ejecución y no es el mismo que estaba ejecutandose */
   if(prevrunning->tid != current) {
     /* Lo encolamos */
-    prevrunning->ticks = QUANTUM_TICKS;
     enqueue(colaB, prevrunning);
   }
   /* Solo encolaremos de nuevo los hilos que sean de baja prioridad, porque los de alta siguen un FIFO y no hay cambios de contexto voluntarios */

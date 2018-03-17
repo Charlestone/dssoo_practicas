@@ -198,6 +198,10 @@ void activator(TCB* next){
   TCB* prevrunning = running;
   running = next;
   current = next->tid;
+  if (prevrunning->ticks == 0)
+  {/* Reestablecemos el quanto del hilo si lo ha terminado */
+    prevrunning->ticks = QUANTUM_TICKS;
+  }
   /* Se comprueba si el hilo que se va a ejecutar es el idle */
   if(running->state == 3){
     printf("*** FINISH\n");
@@ -214,7 +218,6 @@ void activator(TCB* next){
   /* Si el hilo que va a salir no ha terminado su ejecución y no es el mismo que estaba ejecutandose */
   if(prevrunning->tid != current) {
     /* Lo encolamos */
-    prevrunning->ticks = QUANTUM_TICKS;
     enqueue(cola, prevrunning);
   }
   enable_interrupt();
