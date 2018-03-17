@@ -216,7 +216,7 @@ TCB* scheduler(){
       /* Si no y hay algún hilo de baja prioridad por ejecutar*/
       if (!queue_empty(colaB))
       { /* Se comprueba si el hilo en ejecución ha terminado su rodaja */
-        if (running->priority != 0 || (running->ticks == 0 || running->state != 1) )
+        if (running->priority != 0 || (running->ticks <= 0 || running->state != 1) )
         {/* Desencolamos el siguiente listo de prioridad baja */
           aux = dequeue(colaB);
         } else {
@@ -251,7 +251,7 @@ void timer_interrupt(int sig)
   if(running->priority == 0){
     running->ticks--;
     /* Comprobamos si el hilo en ejecución ha terminado su cuanto */
-    if(running->ticks == 0) {
+    if(running->ticks <= 0) {
       TCB* aux = scheduler();
       activator(aux);
     }
@@ -285,14 +285,14 @@ void activator(TCB* next){
     enqueue(colaW, prevrunning);
     printf("*** THREAD %i READ FROM NETWORK\n",prevrunning->tid);
   } else {
+    prevrunning->ticks = QUANTUM_TICKS;
     /* Si el hilo que va a salir no ha terminado su ejecución y no es el mismo que estaba ejecutandose */
     if((prevrunning->tid != current) && prevrunning->tid != -1) {
       /* Lo encolamos */
-      prevrunning->ticks = QUANTUM_TICKS;
       enqueue(colaB, prevrunning);
       /* Solo encolaremos de nuevo los hilos que sean de baja prioridad, porque los de alta siguen un FIFO y no hay cambios de contexto voluntarios */
     }
-  }
+  } 
   enable_interrupt();
   /* Si se explusa un hilo por otro de mayor prioridad */
   if (prevrunning->priority == 0 && running->priority == 1)
@@ -302,12 +302,18 @@ void activator(TCB* next){
     if(prevrunning->priority == 2) {
       printf("*** THREAD READY: SET CONTEXT TO %i\n",current);
     } else {
-      /* Si se explusa un hilo por otro de igual o menor prioridad */
+      if (prevrunning->tid != current)
+      {
+        /* Si se explusa un hilo por otro de igual o menor prioridad */
       printf("*** SWAPCONTEXT FROM %i TO %i\n", prevrunning->tid,current);
+      }
     }
     
   }
-  /* Se cambia de contexto */
+  if (prevrunning->tid != current)
+  {
+    /* Se cambia de contexto */
   swapcontext(&(prevrunning->run_env),&(running->run_env));
+  }
   //printf("mythread_free: After setcontext, should never get here!!...\n");  
 }
