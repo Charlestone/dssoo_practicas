@@ -253,8 +253,15 @@ void activator(TCB* next){
   {
     printf("*** THREAD %i PREEMTED: SETCONTEXT OF %i\n", prevrunning->tid,current);
   } else {
-    printf("*** SWAPCONTEXT FROM %i TO %i\n", prevrunning->tid,current);
+    /* Imprimimos que se va a cambiar de contexto entre dos hilos distintos */
+    if (prevrunning->tid != current)
+    {
+      printf("*** SWAPCONTEXT FROM %i TO %i\n", prevrunning->tid,current);
+    }
   }
-  swapcontext(&(prevrunning->run_env),&(running->run_env));
+  if (prevrunning->tid != current)
+  {/* Solo realizamos el cambio de contexto si los dos hilos son distintos */
+    swapcontext(&(prevrunning->run_env),&(running->run_env));
+  }
   //printf("mythread_free: After setcontext, should never get here!!...\n");  
 }
