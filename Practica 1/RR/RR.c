@@ -109,7 +109,9 @@ int mythread_create (void (*fun_addr)(),int priority)
   makecontext(&t_state[i].run_env, fun_addr, 1); 
   /* Encolamos los hilos a medida que se van creando */
   disable_interrupt();
+  disable_network_interrupt();
   enqueue(cola, &t_state[i]);
+  enable_network_interrupt();
   enable_interrupt();
   return i;
 } /****** End my_thread_create() ******/
@@ -160,8 +162,9 @@ int mythread_gettid(){
 
 /* RR sin prioridad */
 TCB* scheduler(){
-  disable_interrupt();
   TCB* aux;
+  disable_interrupt();
+  disable_network_interrupt();
   /* Si la cola está vacía y el hilo en ejecución no ha terminado */
   if(queue_empty(cola)) {
     if(running->state == 1) {
@@ -175,6 +178,7 @@ TCB* scheduler(){
     /* Si no, se desencola el siguiente */
     aux = dequeue(cola);
   }
+  enable_network_interrupt();
   enable_interrupt();
   return aux;
   printf("mythread_free: No thread in the system\nExiting...\n");	
@@ -184,12 +188,18 @@ TCB* scheduler(){
 
 /* Timer interrupt  */
 void timer_interrupt(int sig)
-{
+{ disable_interrupt();
+  disable_network_interrupt();
   running->ticks--;
   /* Comprobamos si el hilo en ejecución ha terminado su cuanto */
   if(running->ticks == 0) {
+    enable_network_interrupt();
+    enable_interrupt();
     TCB* aux = scheduler();
     activator(aux);
+  } else {
+    enable_network_interrupt();
+    enable_interrupt(); 
   }
 } 
 
@@ -215,11 +225,13 @@ void activator(TCB* next){
     printf("mythread_free: After setcontext, should never get here!!...\n");  
   }
   disable_interrupt();
+  disable_network_interrupt();
   /* Si el hilo que va a salir no ha terminado su ejecución y no es el mismo que estaba ejecutandose */
   if(prevrunning->tid != current) {
     /* Lo encolamos */
     enqueue(cola, prevrunning);
   }
+  enable_network_interrupt();
   enable_interrupt();
   if (prevrunning->tid != current)
   {
