@@ -158,10 +158,10 @@ void network_interrupt(int sig)
     } else {
       enqueue(colaA, aux);
     }
+    enable_interrupt();
     printf("*** THREAD %d READY\n", aux->tid);
     TCB* next = scheduler();
     activator(next);
-    enable_interrupt();
   } else {
     enable_interrupt();
   }
