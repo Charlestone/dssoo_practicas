@@ -218,7 +218,11 @@ void activator(TCB* next){
     enqueue(cola, prevrunning);
   }
   enable_interrupt();
-  printf("*** SWAPCONTEXT FROM %i TO %i\n", prevrunning->tid,current);
-  swapcontext(&(prevrunning->run_env),&(running->run_env));
+  if (prevrunning->tid != current)
+  {
+    printf("*** SWAPCONTEXT FROM %i TO %i\n", prevrunning->tid,current);
+    swapcontext(&(prevrunning->run_env),&(running->run_env));
+  }
+  
   //printf("mythread_free: After setcontext, should never get here!!...\n");	
 }

@@ -93,7 +93,7 @@ int main(int argc, char *argv[])
     printf("thread failed to initialize\n");
     exit(-1);
   }
-  if((b =  mythread_create(fun1,HIGH_PRIORITY)) == -1){
+  if((b =  mythread_create(fun3,HIGH_PRIORITY)) == -1){
     printf("thread failed to initialize\n");
     exit(-1);
   }
