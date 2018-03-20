@@ -76,8 +76,10 @@ void init_mythreadlib() {
   init_interrupt();
   /* Initialize queue */
   disable_interrupt();
+  disable_network_interrupt();
   colaA = queue_new();
   colaB = queue_new();
+  enable_network_interrupt();
   enable_interrupt();
 }
 
@@ -113,7 +115,9 @@ int mythread_create (void (*fun_addr)(),int priority)
   if (priority == 1) {
     /* Si el hilo es de alta prioridad */
     disable_interrupt();
+    disable_network_interrupt();
     enqueue(colaA, &t_state[i]);
+    enable_network_interrupt();
     enable_interrupt();
     /* Se comprueba si el hilo ejecutandose es de baja prioridad, para llamar al planificador */
     if (running->priority == 0)
@@ -124,7 +128,9 @@ int mythread_create (void (*fun_addr)(),int priority)
     
   } else {
     disable_interrupt();
+    disable_network_interrupt();
     enqueue(colaB, &t_state[i]);
+    enable_network_interrupt();
     enable_interrupt();
   }
   
@@ -178,6 +184,7 @@ int mythread_gettid(){
 /* RR con prioridad */
 TCB* scheduler(){
   disable_interrupt();
+  disable_network_interrupt();
   TCB* aux;
   /* Si hay un hilo de alta prioridad listo */
   if (!queue_empty(colaA))
@@ -201,6 +208,7 @@ TCB* scheduler(){
       }
     }
   }
+  enable_network_interrupt();
   enable_interrupt();
   return aux;
   printf("mythread_free: No thread in the system\nExiting...\n"); 
@@ -245,12 +253,14 @@ void activator(TCB* next){
     printf("mythread_free: After setcontext, should never get here!!...\n");  
   }
   disable_interrupt();
+  disable_network_interrupt();
   /* Si el hilo que va a salir no ha terminado su ejecución y no es el mismo que estaba ejecutandose */
   if(prevrunning->tid != current) {
     /* Lo encolamos */
     enqueue(colaB, prevrunning);
   }
   /* Solo encolaremos de nuevo los hilos que sean de baja prioridad, porque los de alta siguen un FIFO y no hay cambios de contexto voluntarios */
+  enable_network_interrupt();
   enable_interrupt();
   if (prevrunning->priority == 0 && running->priority == 1)
   {
