@@ -185,7 +185,6 @@ void network_interrupt(int sig)
     enable_network_interrupt();
     enable_interrupt();
   }
-  
 } 
 
 
