@@ -75,7 +75,9 @@ void init_mythreadlib() {
   init_interrupt();
   /* Initialize queue */
   disable_interrupt();
+  disable_network_interrupt();
   cola = queue_new();
+  enable_network_interrupt();
   enable_interrupt();
 }
 
