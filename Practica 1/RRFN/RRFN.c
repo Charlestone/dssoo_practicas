@@ -289,7 +289,7 @@ void activator(TCB* next){
   /* Se comprueba si el hilo que se va a ejecutar es el idle y no quedan hilos listos ni esperando*/
   if(running->state == 3 && queue_empty(colaW) && prevrunning->state != 2){
     printf("*** FINISH\n");
-    /* Se debería salir del programa */
+    /* Se sale del programa */
     exit(0);
   }
   /* Si el hilo que va a ser expulsado ha terminado su ejecución */

@@ -244,7 +244,7 @@ void activator(TCB* next){
   /* Se comprueba si el hilo que se va a ejecutar es el idle */
   if(running->state == 3){
     printf("*** FINISH\n");
-    /* Se debería salir del programa */
+    /* Se sale del programa */
     exit(0);
   }
   /* Comprobamos si el hilo que va a ser expulsado ha terminado su ejecución */
