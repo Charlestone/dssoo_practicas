@@ -211,7 +211,7 @@ void activator(TCB* next){
   running = next;
   current = next->tid;
   if (prevrunning->ticks == 0)
-  {/* Reestablecemos el quanto del hilo si lo ha terminado */
+  {/* Restablecemos el quanto del hilo si lo ha terminado */
     prevrunning->ticks = QUANTUM_TICKS;
   }
   /* Se comprueba si el hilo que se va a ejecutar es el idle */

@@ -156,7 +156,7 @@ void network_interrupt(int sig)
   if(!queue_empty(colaW)) {
     /* Se desencola */
     aux = dequeue(colaW);
-    /* Y se le cambia a estado listo y se le reestablece el cuanto */
+    /* Y se le cambia a estado listo y se le restablece el cuanto */
     aux->state = INIT;
     aux->ticks = QUANTUM_TICKS;
     /* Después se le encola donde corresponda */
@@ -281,7 +281,7 @@ void activator(TCB* next){
   current = next->tid;
   /* Si el hilo anterior ha terminado su cuanto */
   if (prevrunning->ticks == 0)
-  {/* Se reestablece */
+  {/* Se restablece */
     prevrunning->ticks = QUANTUM_TICKS;
   }
   disable_interrupt();
@@ -309,7 +309,7 @@ void activator(TCB* next){
   } else {
     /* Si el hilo que va a salir no ha terminado su ejecución y no es el mismo que estaba ejecutandose */
     if((prevrunning->tid != current) && prevrunning->tid != -1) {
-      /* Se reestablece su cuanto */
+      /* Se restablece su cuanto */
       prevrunning->ticks = QUANTUM_TICKS;
       /* Lo encolamos */
       enqueue(colaB, prevrunning);

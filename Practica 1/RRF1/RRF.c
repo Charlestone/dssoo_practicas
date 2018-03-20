@@ -238,7 +238,7 @@ void activator(TCB* next){
   current = next->tid;
   /* Si el hilo anterior ha terminado su cuanto */
   if (prevrunning->ticks == 0)
-  {/* Se reestablece  */
+  {/* Se restablece  */
     prevrunning->ticks = QUANTUM_TICKS;
   }
   /* Se comprueba si el hilo que se va a ejecutar es el idle */
@@ -257,7 +257,7 @@ void activator(TCB* next){
   disable_network_interrupt();
   /* Si el hilo que va a salir no ha terminado su ejecución y no es el mismo que estaba ejecutandose */
   if(prevrunning->tid != current) {
-    /* Se reestablece su cuanto */
+    /* Se restablece su cuanto */
     prevrunning->ticks = QUANTUM_TICKS;
     /* Lo encolamos */
     enqueue(colaB, prevrunning);
