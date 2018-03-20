@@ -335,9 +335,13 @@ void activator(TCB* next){
     
   }
   if (prevrunning->tid != current)
-  {
-    /* Se cambia de contexto */
-  swapcontext(&(prevrunning->run_env),&(running->run_env));
+  {/* Solo realizamos el cambio de contexto si los dos hilos son distintos */
+   if (prevrunning->tid == -1)
+    {/* Si el proceso anterior es el idle, no se guarda su contexto */
+      setcontext(&(running->run_env));
+    } else {
+      swapcontext(&(prevrunning->run_env),&(running->run_env));
+    }
   }
   //printf("mythread_free: After setcontext, should never get here!!...\n");  
 }
