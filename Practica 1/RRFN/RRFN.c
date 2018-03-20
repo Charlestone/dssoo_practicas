@@ -77,9 +77,11 @@ void init_mythreadlib() {
   init_interrupt();
   /* Initialize queue */
   disable_interrupt();
+  disable_network_interrupt();
   colaA = queue_new();
   colaB = queue_new();
   colaW = queue_new();
+  enable_network_interrupt();
   enable_interrupt();
 }
 
@@ -115,7 +117,9 @@ int mythread_create (void (*fun_addr)(),int priority)
   if (priority == 1) {
     /* Si el hilo es de alta prioridad */
     disable_interrupt();
+    disable_network_interrupt();
     enqueue(colaA, &t_state[i]);
+    enable_network_interrupt();
     enable_interrupt();
     /* Se comprueba si el hilo ejecutandose es de baja prioridad, para llamar al planificador */
     if (running->priority == 0)
@@ -125,7 +129,9 @@ int mythread_create (void (*fun_addr)(),int priority)
      } 
   } else {
     disable_interrupt();
+    disable_network_interrupt();
     enqueue(colaB, &t_state[i]);
+    enable_network_interrupt();
     enable_interrupt();
   }
   return i;
@@ -144,6 +150,7 @@ int read_network()
 void network_interrupt(int sig)
 {
   disable_interrupt();
+  disable_network_interrupt();
   TCB* aux;
   /* Si hay algún hilo esperando */
   if(!queue_empty(colaW)) {
@@ -158,11 +165,24 @@ void network_interrupt(int sig)
     } else {
       enqueue(colaA, aux);
     }
+    enable_network_interrupt();
     enable_interrupt();
     printf("*** THREAD %d READY\n", aux->tid);
-    TCB* next = scheduler();
-    activator(next);
+    /* Si se está ejecutando el idle, se llama al planificador independientemente de la prioridad del hilo que ha salido */
+    if (running->priority == 2)
+    {
+      TCB* next = scheduler();
+      activator(next);
+    } else {
+      /* Si se está ejecutando uno de baja prioridad, solo se llama al planificador si se ha desencolado uno de alta */
+      if (running->priority == 0 && aux->priority == 1)
+      {
+        TCB* next = scheduler();
+        activator(next);
+      }
+    }
   } else {
+    enable_network_interrupt();
     enable_interrupt();
   }
   
@@ -204,6 +224,7 @@ int mythread_gettid(){
 /* RR con prioridad y con cambios de contexto voluntarios */
 TCB* scheduler(){
   disable_interrupt();
+  disable_network_interrupt();
   TCB* aux;
   /* Si el hilo que está en ejecución es de alta prioridad y no ha terminado, será el próximo a ejecutar */
   if(running->priority != 1 || running->state != 1) {
@@ -214,15 +235,9 @@ TCB* scheduler(){
       aux = dequeue(colaA);
     } else {
       /* Si no y hay algún hilo de baja prioridad por ejecutar*/
-      if (!queue_empty(colaB))
-      { /* Se comprueba si el hilo en ejecución ha terminado su rodaja */
-        if (running->priority != 0 || (running->ticks <= 0 || running->state != 1) )
-        {/* Desencolamos el siguiente listo de prioridad baja */
-          aux = dequeue(colaB);
-        } else {
-          /* Si no ha terminado su rodaja, el hilo sigue ejecutandose porque no hay hilos de alta prioridad que esté listo */
-          aux = running;
-        }
+      if (!queue_empty(colaB)) {
+        /* Se desencola uno de alta prioridad */
+        aux = dequeue(colaB);
       } else {
         /* Si no quedan más hilos en las colas y el hilo que se está ejecutando no ha terminado */
         if(running->state == 1) {
@@ -237,6 +252,7 @@ TCB* scheduler(){
   } else {
     aux = running;
   }
+  enable_network_interrupt();
   enable_interrupt();
   return aux;
   printf("mythread_free: No thread in the system\nExiting...\n"); 
@@ -250,6 +266,7 @@ void timer_interrupt(int sig)
   /* Si el hilo es de prioridad baja, se sigue el Round Robin*/
   if(running->priority == 0){
     running->ticks--;
+    printf("Running ticks: %d\n",running->ticks );
     /* Comprobamos si el hilo en ejecución ha terminado su cuanto */
     if(running->ticks <= 0) {
       TCB* aux = scheduler();
@@ -264,11 +281,13 @@ void activator(TCB* next){
   TCB* prevrunning = running;
   running = next;
   current = next->tid;
+  /* Si el hilo anterior ha terminado su cuanto */
   if (prevrunning->ticks == 0)
-  {
+  {/* Se reestablece */
     prevrunning->ticks = QUANTUM_TICKS;
   }
   disable_interrupt();
+  disable_network_interrupt();
   /* Se comprueba si el hilo que se va a ejecutar es el idle y no quedan hilos listos ni esperando*/
   if(running->state == 3 && queue_empty(colaW) && prevrunning->state != 2){
     printf("*** FINISH\n");
@@ -279,6 +298,7 @@ void activator(TCB* next){
   if(prevrunning->state == 0) {
     printf("*** THREAD %i TERMINATED: SETCONTEXT OF %i\n", prevrunning->tid,current);
     /* Se establece el contexto del que se va a ejecutar */
+    enable_network_interrupt();
     enable_interrupt();
     setcontext(&(running->run_env));
     printf("mythread_free: After setcontext, should never get here!!...\n");  
@@ -291,11 +311,14 @@ void activator(TCB* next){
   } else {
     /* Si el hilo que va a salir no ha terminado su ejecución y no es el mismo que estaba ejecutandose */
     if((prevrunning->tid != current) && prevrunning->tid != -1) {
+      /* Se reestablece su cuanto */
+      prevrunning->ticks = QUANTUM_TICKS;
       /* Lo encolamos */
       enqueue(colaB, prevrunning);
       /* Solo encolaremos de nuevo los hilos que sean de baja prioridad, porque los de alta siguen un FIFO y no hay cambios de contexto voluntarios */
     }
   } 
+  enable_network_interrupt();
   enable_interrupt();
   /* Si se explusa un hilo por otro de mayor prioridad */
   if (prevrunning->priority == 0 && running->priority == 1)
