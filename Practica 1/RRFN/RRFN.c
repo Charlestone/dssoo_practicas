@@ -266,7 +266,6 @@ void timer_interrupt(int sig)
   /* Si el hilo es de prioridad baja, se sigue el Round Robin*/
   if(running->priority == 0){
     running->ticks--;
-    printf("Running ticks: %d\n",running->ticks );
     /* Comprobamos si el hilo en ejecución ha terminado su cuanto */
     if(running->ticks <= 0) {
       TCB* aux = scheduler();
