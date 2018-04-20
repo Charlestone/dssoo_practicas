@@ -10,6 +10,7 @@
 #include "include/auxiliary.h"		// Headers for auxiliary functions
 #include "include/metadata.h"		// Type and structure declaration of the file system
 #include "include/crc.h"			// Headers for the CRC functionality
+#include <string.h> 				// Header para utilizar memcpy
 
 static superbloque sbloque;
 static inodo inodos[40];
@@ -19,24 +20,30 @@ static inodo inodos[40];
  * @return 	0 if success, -1 otherwise.
  */
 int mkFS(long deviceSize)
-{	
-	if (deviceSize < MIN_FS_SIZE || deviceSize > MAX_FS_SIZE)
-	{
+{	/* Se comprueba si el tamaño deseado excede los límites */
+	if (deviceSize < MIN_FS_SIZE || deviceSize > MAX_FS_SIZE){
 		return -1;
 	}
-	if (deviceSize%BLOCK_SIZE =! 0)
-	{
-		sbloque.numBLoquesDatos = deviceSize/BLOCK_SIZE + 1;
+	/* Se comprueba el número de bloques que tendrá el dispositivo en función de su tamaño */
+	if (deviceSize%BLOCK_SIZE != 0){
+		sbloque.numBloquesDatos = deviceSize/BLOCK_SIZE + 1;
 	} else {
-		sbloque.numBLoquesDatos = deviceSize/BLOCK_SIZE;
+		sbloque.numBloquesDatos = deviceSize/BLOCK_SIZE;
 	}
+	/* Se ponen a 0 los mapas de bits */
 	memset(sbloque.bmapai, '0', sizeof(sbloque.bmapai));
 	memset(sbloque.bmapab, '0', sizeof(sbloque.bmapab));
+	/* Se establece el tamaño del dispositivo */
 	sbloque.tamDispositivo = deviceSize;
-	
+	/* Buffer auxiliar para escribir el superbloque */
+	char aux [BLOCK_SIZE];
+	memcpy(&aux, &sbloque, BLOCK_SIZE);
+	/* Se escribe el superbloque en el disco */
+	if(bwrite(DEVICE_IMAGE, 0, aux) == -1){
+		return -1;
+	}
+	return 0;
 
-
-	
 }
 
 /*
@@ -44,8 +51,23 @@ int mkFS(long deviceSize)
  * @return 	0 if success, -1 otherwise.
  */
 int mountFS(void)
-{
-	return -1;
+{	/* Buffer auxiliar para leer el superbloque */
+	char aux [BLOCK_SIZE];
+	/* Se lee el superbloque */
+	if(bread(DEVICE_IMAGE, 0, aux) == -1){
+		return -1;
+	}
+	/* Se guarda en memoria */
+	memcpy(&sbloque, &aux, BLOCK_SIZE);
+	/* Se borra aux */
+	memset(aux, '0', BLOCK_SIZE);
+	/* Se lee el bloque que contiene los inodos */
+	if(bread(DEVICE_IMAGE, 1, aux) == -1){
+		return -1;
+	}
+	/* Se guardan en memoria */
+	memcpy(&inodos, &aux, 1520);
+	return 0;
 }
 
 /*
