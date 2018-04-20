@@ -29,9 +29,10 @@ char relleno[PADDING_SB]; /* Campo de relleno (para completar un bloque) ???*/
 typedef struct {
 unsigned int tipo; /* T_FICHERO o T_DIRECTORIO */
 char nombre[32]; /* Nombre del fichero/directorio asociado cuya longitud máxima es de 32 caracteres */
-unsigned int inodosContenidos[200]; /* tipo==dir: lista de los inodos del directorio ES POSBILE QUE NO HAGA FALTA PORQUE NO HAY DIRECTORIOS O QUE SE UTILICE SOLO EN EL RAIZ*/
+unsigned int inodosContenidos[40]; /* tipo==dir: lista de los inodos del directorio ES POSBILE QUE NO HAGA FALTA PORQUE NO HAY DIRECTORIOS O QUE SE UTILICE SOLO EN EL RAIZ*/
 unsigned int tamanyo; /* Tamaño actual del fichero en bytes */
 unsigned int bloqueDirecto; /* Número del bloque directo */
+unsigned int bloqueIndirecto; /* array de punteros*/
 /* Es posible que hagan falta punteros para más bloques */
 char relleno[PADDING_INODO]; /* Campo relleno para llenar un bloque ???*/
 } inodo;
