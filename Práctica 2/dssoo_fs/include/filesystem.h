@@ -18,8 +18,8 @@
 #define FS_SEEK_CUR 0
 #define FS_SEEK_END 1
 #define FS_SEEK_BEGIN 2
-#define MAX_FS_SIZE /*OJETE*/
-#define MIN_FS_SIZ /*OJETE*/
+#define MAX_FS_SIZE 10485760 /* Tamaño máximo del dispositivo en bytes*/
+#define MIN_FS_SIZE 51200 /* Tamaño mínimo del dispositivo en bytes */
 
 
 /*
