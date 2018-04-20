@@ -18,6 +18,8 @@
 #define FS_SEEK_CUR 0
 #define FS_SEEK_END 1
 #define FS_SEEK_BEGIN 2
+#define MAX_FS_SIZE /*OJETE*/
+#define MIN_FS_SIZ /*OJETE*/
 
 
 /*

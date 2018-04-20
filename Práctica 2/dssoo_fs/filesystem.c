@@ -11,7 +11,8 @@
 #include "include/metadata.h"		// Type and structure declaration of the file system
 #include "include/crc.h"			// Headers for the CRC functionality
 
-static superbloque * sbloque [1];
+static superbloque sbloque;
+static inodo inodos[40];
 
 /*
  * @brief 	Generates the proper file system structure in a storage device, as designed by the student.
@@ -19,12 +20,27 @@ static superbloque * sbloque [1];
  */
 int mkFS(long deviceSize)
 {	
+	if (deviceSize < MIN_FS_SIZE || deviceSize > MAX_FS_SIZE)
+	{
+		return -1;
+	}
+	if (deviceSize%BLOCK_SIZE =! 0)
+	{
+		sbloque.numBLoquesDatos = deviceSize/BLOCK_SIZE + 1;
+	} else {
+		sbloque.numBLoquesDatos = deviceSize/BLOCK_SIZE;
+	}
+	memset(sbloque.bmapai, '0', sizeof(sbloque.bmapai));
+	memset(sbloque.bmapab, '0', sizeof(sbloque.bmapab));
+	sbloque.tamDispositivo = deviceSize;
+	
 
-	return -1;
+
+	
 }
 
 /*
- * @brief 	Mounts a file system in the simulated device.
+ * @brief 	Mounts a file system in the simulated device.0
  * @return 	0 if success, -1 otherwise.
  */
 int mountFS(void)
