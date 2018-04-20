@@ -11,13 +11,15 @@
 #include "include/metadata.h"		// Type and structure declaration of the file system
 #include "include/crc.h"			// Headers for the CRC functionality
 
+static superbloque * sbloque [1];
 
 /*
  * @brief 	Generates the proper file system structure in a storage device, as designed by the student.
  * @return 	0 if success, -1 otherwise.
  */
 int mkFS(long deviceSize)
-{
+{	
+
 	return -1;
 }
 
