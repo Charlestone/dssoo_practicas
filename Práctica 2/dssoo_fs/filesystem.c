@@ -171,7 +171,18 @@ int removeFile(char *fileName)
  * @return	The file descriptor if possible, -1 if file does not exist, -2 in case of error..
  */
 int openFile(char *fileName)
-{
+{	
+	/* Se comprueba si el nombre existe */
+	int inodo = namei(fileName)
+	if (inodo == -1)
+	{
+		return -1;
+	}
+	/* Se comprueba que no este en uso*/
+	if (inodos_uso[inodo] != 1){
+		inodos_uso[inodo] =1;
+		return inodo;
+	}
 	return -2;
 }
 
@@ -181,7 +192,14 @@ int openFile(char *fileName)
  */
 int closeFile(int fileDescriptor)
 {
-	return -1;
+	/* Se comprueba si el descriptor es correcto*/
+	if ((fileDescriptor < 0) || (fileDescriptor > (sbloque.numInodos -1)))
+	{
+		return -1
+	}
+	/* Le asignamos el valor 0 para indicar que esta no esta abierto*/
+	inodos_uso[fileDescriptor] = 0;
+	return 1;
 }
 
 /*
