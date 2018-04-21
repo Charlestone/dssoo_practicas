@@ -12,61 +12,78 @@
 #include "include/crc.h"			// Headers for the CRC functionality
 #include <string.h> 				// Header para utilizar memcpy
 
-static superbloque sbloque;
-static inodo inodos[40];
-
+static superbloque sbloque;						// Estructura para almacenar el superbloque
+static inodo inodos[40];						// Estructura para almacenar los inodos
+static unsigned int inodos_uso[40];				// Estructura auxiliar para controlar si los inodos están abiertos
+//static unsigned int punteros_lectura[40];		// Estructura auxiliar para almacenar punteros de lectura
+//static unsigned int punteros_escritura[40]; 	// Estructura auxiliar para almacenar punteros de lectura
 /*
  * @brief 	Generates the proper file system structure in a storage device, as designed by the student.
  * @return 	0 if success, -1 otherwise.
  */
 int mkFS(long deviceSize)
-{	/* Se comprueba si el tamaño deseado excede los límites */
-	if (deviceSize < MIN_FS_SIZE || deviceSize > MAX_FS_SIZE){
+{	
+	/* Se comprueba si el tamaño deseado excede los límites */
+	if (deviceSize < MIN_FS_SIZE || deviceSize > MAX_FS_SIZE)
+	{
 		return -1;
 	}
+	sbloque.numInodos =  40;
 	/* Se comprueba el número de bloques que tendrá el dispositivo en función de su tamaño */
-	if (deviceSize%BLOCK_SIZE != 0){
+	if (deviceSize%BLOCK_SIZE != 0)
+	{
 		sbloque.numBloquesDatos = deviceSize/BLOCK_SIZE + 1;
 	} else {
 		sbloque.numBloquesDatos = deviceSize/BLOCK_SIZE;
 	}
 	/* Se ponen a 0 los mapas de bits */
-	memset(sbloque.bmapai, '0', sizeof(sbloque.bmapai));
-	memset(sbloque.bmapab, '0', sizeof(sbloque.bmapab));
+	memset(&sbloque.bmapai, '0', sizeof(sbloque.bmapai));
+	memset(&sbloque.bmapab, '0', sizeof(sbloque.bmapab));
 	/* Se establece el tamaño del dispositivo */
 	sbloque.tamDispositivo = deviceSize;
 	/* Buffer auxiliar para escribir el superbloque */
 	char aux [BLOCK_SIZE];
 	memcpy(&aux, &sbloque, BLOCK_SIZE);
 	/* Se escribe el superbloque en el disco */
-	if(bwrite(DEVICE_IMAGE, 0, aux) == -1){
+	if(bwrite(DEVICE_IMAGE, 0, aux) == -1)
+	{
+		/* Se informa si se produce un problema en la escritura en el disco */
 		return -1;
 	}
-	return 0;
+	/* Se vacían los metadatos */
+	memset(&sbloque, '0', sizeof(sbloque));
+	memset(&inodos, '0', sizeof(inodos));
 
+	return 0;
 }
 
 /*
- * @brief 	Mounts a file system in the simulated device.0
+ * @brief 	Mounts a file system in the simulated device.
  * @return 	0 if success, -1 otherwise.
  */
 int mountFS(void)
-{	/* Buffer auxiliar para leer el superbloque */
+{	
+	/* Buffer auxiliar para leer */
 	char aux [BLOCK_SIZE];
 	/* Se lee el superbloque */
-	if(bread(DEVICE_IMAGE, 0, aux) == -1){
+	if(bread(DEVICE_IMAGE, 0, aux) == -1)
+	{
+		/* Se informa si se produce un problema en la lectura del disco */
 		return -1;
 	}
 	/* Se guarda en memoria */
 	memcpy(&sbloque, &aux, BLOCK_SIZE);
+	printf("%d\n", sbloque.numInodos);
 	/* Se borra aux */
-	memset(aux, '0', BLOCK_SIZE);
+	memset(&aux, '0', BLOCK_SIZE);
 	/* Se lee el bloque que contiene los inodos */
-	if(bread(DEVICE_IMAGE, 1, aux) == -1){
+	if(bread(DEVICE_IMAGE, 1, aux) == -1)
+	{
+		/* Se informa si se produce un problema en la lectura del disco */
 		return -1;
 	}
-	/* Se guardan en memoria */
-	memcpy(&inodos, &aux, 1520);
+	/* Se guardan en memoria los inodos*/
+	memcpy(&inodos, &aux, sizeof(inodos));
 	return 0;
 }
 
@@ -76,7 +93,39 @@ int mountFS(void)
  */
 int unmountFS(void)
 {
-	return -1;
+	/* Se comprueba si hay algún inodo en uso */
+	for (int i = 0; i < sbloque.numInodos; ++i)
+	{
+		if (inodos_uso[i] != 0)
+		{
+			return -1;
+		}
+	}
+	/* Buffer auxiliar para escribir el superbloque */
+	char aux [BLOCK_SIZE];
+	/* Se copia el superbloque a aux */
+	memcpy(&aux, &sbloque, BLOCK_SIZE);
+	/* Se escribe el superbloque en el disco */
+	if(bwrite(DEVICE_IMAGE, 0, aux) == -1)
+	{
+		/* Se informa si se produce un problema en la escritura en el disco */
+		return -1;
+	}
+	/* Se borra aux */
+	memset(&aux, '0', BLOCK_SIZE);
+	/* Se copian los inodos a aux */
+	memcpy(&aux, &inodos, sizeof(inodos));
+	/* Se escriben los inodos en el disco */
+	if(bwrite(DEVICE_IMAGE, 1, aux) == -1)
+	{
+		/* Se informa si se produce un problema en la escritura en el disco */
+		return -1;
+	}
+	/* Se vacían los metadatos */
+	memset(&sbloque, '0', sizeof(sbloque));
+	memset(&inodos, '0', sizeof(inodos));
+
+	return 0;
 }
 
 /*
@@ -85,6 +134,26 @@ int unmountFS(void)
  */
 int createFile(char *fileName)
 {
+	/* Se comprueba si el nombre ya existe */
+	if (namei(fileName) == -1)
+	{
+		return -1;
+	}
+	/* Se compruena si hay un inodo libre */
+	int inodo = ialloc();
+	if (inodo == -1)
+	{
+		return -2;
+	}
+	/* Se comprueba si hay un bloque para el indice fichero */
+	int bloque = alloc();
+	if (bloque == -1)
+	{
+		return -2;
+	}
+	/*  */
+	/* Si hay un inodo y un bloque */
+
 	return -2;
 }
 
@@ -159,4 +228,110 @@ int checkFS(void)
 int checkFile(char *fileName)
 {
 	return -2;
+}
+
+/*=============================================
+=            Funciones auxiliares             =
+=============================================*/
+
+/*
+ * @brief 	Devuelve el primer inodo libre en el sistema de ficheros.
+ * @return 	Número del primer inodo libre, -1 si no hay inodos libres.
+ */
+int ialloc(void)
+{
+	/* Se recorre el mapa de bits de inodos buscando uno libre */
+	for (int i = 0; i < sbloque.numInodos; ++i)
+	{
+		/* Cuando se encuentra el primero */
+		if (bitmap_getbit(sbloque.bmapai, i) == 0)
+		{	
+			/* Se marca como en uso */
+			bitmap_setbit(sbloque.bmapai, i, 1);
+			/* Se vacía */
+			memset(&inodos[i], '0', sizeof(inodo));
+			/* Y se devuelve */
+			return i;
+		}
+	}
+	/* Si no se ha encontrado ninguno, se devuelve -1 */
+	return -1;
+}
+
+/*
+ * @brief 	Devuelve el primer bloque libre en el sistema de ficheros
+ * @return 	Número del primer bloque libre, -1 si no hay bloques libres.
+ */
+int alloc(void)
+{
+	/* Se recorre el mapa de bits de inodos buscando uno libre */
+	for (int i = 0; i < sbloque.numBloquesDatos; ++i)
+	{
+		/* Cuando se encuentra el primero */
+		if (bitmap_getbit(sbloque.bmapab, i) == 0)
+		{	
+			/* Se marca como en uso */
+			bitmap_setbit(sbloque.bmapab, i, 1);
+			/* Se vacía */
+			char aux[BLOCK_SIZE];
+			memset(&aux, '0', BLOCK_SIZE);
+			bwrite(DEVICE_IMAGE, 1 + i, aux);
+			/* Y se devuelve */
+			return i;
+		}
+	}
+	/* Si no se ha encontrado ninguno, se devuelve -1 */
+	return -1;
+}
+
+/*
+ * @brief 	Comprueba si existe un inodo con cierto nombre
+ * @return 	El número del inodo, -1 si no existe un inodo con ese nombre.
+ */
+int namei(char *fileName)
+{
+	/* Se recorren los inodos */
+	for (int i = 0; i < sbloque.numInodos; ++i)
+	{
+		/* Cuando se encuentre uno con el mismo nombre */
+		if (strcmp(inodos[i].nombre, fileName) == 0)
+		{	
+			/* Se devuelve su número */
+			return i;
+		}
+	}
+	/* Si no hay ninguno con ese nomnbre, se devuelve -1 */
+	return -1;
+}
+
+/*
+ * @brief 	Libera un inodo
+ * @return 	0 si se libera correctamente, -1 en otro caso.
+ */
+int ifree(int inodo)
+{
+	/* Se comprueba si el inodo existe */
+	if (inodo >= sbloque.numInodos)
+	{
+		return -1;
+	}
+	/* Si existe, se libera */
+	bitmap_setbit( sbloque.bmapai, inodo, 0);
+	return 0;
+}
+
+/*
+ * @brief 	Libera un bloque
+ * @return 	0 si se libera correctamente, -1 en otro caso.
+ */
+int bfree(int bloque)
+{
+	/* Se comprueba si el bloque existe */
+	if (bloque >= sbloque.numBloquesDatos)
+	{
+		return -1;
+	}
+	/* Si existe, se libera */
+	bitmap_setbit( sbloque.bmapab, bloque, 0);
+	return 0;
 }
