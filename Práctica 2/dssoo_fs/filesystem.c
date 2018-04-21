@@ -173,7 +173,7 @@ int removeFile(char *fileName)
 int openFile(char *fileName)
 {	
 	/* Se comprueba si el nombre existe */
-	int inodo = namei(fileName)
+	int inodo = namei(fileName);
 	if (inodo == -1)
 	{
 		return -1;
@@ -195,7 +195,7 @@ int closeFile(int fileDescriptor)
 	/* Se comprueba si el descriptor es correcto*/
 	if ((fileDescriptor < 0) || (fileDescriptor > (sbloque.numInodos -1)))
 	{
-		return -1
+		return -1;
 	}
 	/* Le asignamos el valor 0 para indicar que esta no esta abierto*/
 	inodos_uso[fileDescriptor] = 0;
