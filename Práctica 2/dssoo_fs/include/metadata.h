@@ -25,7 +25,7 @@ typedef struct {
 	uint16_t numBloquesDatos; 	/* Número de bloques de datos totales en el disp. Lo ponemos como short porque no hace falta que sea un ing. Ocupa 5 * 2^10*/
 	char bmapai[5]; 			//Mapa de bits de los inodos
 	char bmapab[640]; 			//Mapa de bits de los bloques de datos
-	uint32_t tamDispositivo; 	/* Tamaño total del disp. (en bytes) Numero de bloques * 2048 (tamaño de bloque) */
+	uint32_t tamDispositivo; 	/* Tamaño total del disp. (en bytes)*/
 	char relleno[1396]; 		//Relleno del bloque
 } superbloque;
 
