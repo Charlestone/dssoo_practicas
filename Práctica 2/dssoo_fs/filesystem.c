@@ -179,7 +179,8 @@ int openFile(char *fileName)
 		return -1;
 	}
 	/* Se comprueba que no este en uso */
-	if (inodos_uso[inodo] == 0){
+	if (inodos_uso[inodo] == 0)
+	{
 		/* Se marca como en uso */
 		inodos_uso[inodo] = 1;
 		/* Se restauran sus punteros de lectura y escritura */
@@ -204,7 +205,7 @@ int closeFile(int fileDescriptor)
 	}
 	/* Le asignamos el valor 0 para indicar que esta no esta abierto*/
 	inodos_uso[fileDescriptor] = 0;
-	return 1;
+	return 0;
 }
 
 /*
