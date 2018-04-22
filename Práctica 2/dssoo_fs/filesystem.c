@@ -13,10 +13,10 @@
 #include <string.h> 				// Header para utilizar memcpy
 
 static superbloque sbloque;						// Estructura para almacenar el superbloque
-static inodo inodos[40];						// Estructura para almacenar los inodos
-static unsigned int inodos_uso[40];				// Estructura auxiliar para controlar si los inodos están abiertos
-//static unsigned int punteros_lectura[40];		// Estructura auxiliar para almacenar punteros de lectura
-//static unsigned int punteros_escritura[40]; 	// Estructura auxiliar para almacenar punteros de lectura
+static inodo inodos[MAX_INODOS];						// Estructura para almacenar los inodos
+static unsigned int inodos_uso[MAX_INODOS];				// Estructura auxiliar para controlar si los inodos están abiertos
+static unsigned int punteros_lectura[MAX_INODOS];		// Estructura auxiliar para almacenar punteros de lectura
+static unsigned int punteros_escritura[MAX_INODOS]; 	// Estructura auxiliar para almacenar punteros de lectura
 /*
  * @brief 	Generates the proper file system structure in a storage device, as designed by the student.
  * @return 	0 if success, -1 otherwise.
@@ -28,7 +28,7 @@ int mkFS(long deviceSize)
 	{
 		return -1;
 	}
-	sbloque.numInodos =  40;
+	sbloque.numInodos =  MAX_INODOS;
 	/* Se comprueba el número de bloques que tendrá el dispositivo en función de su tamaño */
 	if (deviceSize%BLOCK_SIZE != 0)
 	{
@@ -178,9 +178,14 @@ int openFile(char *fileName)
 	{
 		return -1;
 	}
-	/* Se comprueba que no este en uso*/
-	if (inodos_uso[inodo] != 1){
-		inodos_uso[inodo] =1;
+	/* Se comprueba que no este en uso */
+	if (inodos_uso[inodo] == 0){
+		/* Se marca como en uso */
+		inodos_uso[inodo] = 1;
+		/* Se restauran sus punteros de lectura y escritura */
+		punteros_lectura[inodo] = 0;
+		punteros_escritura[inodo] = 0;
+
 		return inodo;
 	}
 	return -2;
