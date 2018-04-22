@@ -13,6 +13,9 @@ static inline void bitmap_setbit(char *bitmap_, int i_, int val_) { /*El código
   else
     bitmap_[(i_ >> 3)] &= ~(1 << (i_ & 0x07));
 } 
+#define numInodos 40
+#define MAX_FS_SIZE 10485760 	/* Tamaño máximo del dispositivo en bytes*/
+#define MIN_FS_SIZE 51200 		/* Tamaño mínimo del dispositivo en bytes */
 
 #include <stdint.h>				//Header para utilizar uint
 
