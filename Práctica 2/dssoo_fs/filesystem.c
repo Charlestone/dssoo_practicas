@@ -15,8 +15,7 @@
 static superbloque sbloque;						// Estructura para almacenar el superbloque
 static inodo inodos[MAX_INODOS];						// Estructura para almacenar los inodos
 static unsigned int inodos_uso[MAX_INODOS];				// Estructura auxiliar para controlar si los inodos están abiertos
-static unsigned int punteros_lectura[MAX_INODOS];		// Estructura auxiliar para almacenar punteros de lectura
-static unsigned int punteros_escritura[MAX_INODOS]; 	// Estructura auxiliar para almacenar punteros de lectura
+static unsigned int punteros_lec_esc[MAX_INODOS];		// Estructura auxiliar para almacenar punteros de lectura y escritura
 /*
  * @brief 	Generates the proper file system structure in a storage device, as designed by the student.
  * @return 	0 if success, -1 otherwise.
@@ -184,8 +183,7 @@ int openFile(char *fileName)
 		/* Se marca como en uso */
 		inodos_uso[inodo] = 1;
 		/* Se restauran sus punteros de lectura y escritura */
-		punteros_lectura[inodo] = 0;
-		punteros_escritura[inodo] = 0;
+		punteros_lec_esc[inodo] = 0;
 
 		return inodo;
 	}
@@ -199,7 +197,7 @@ int openFile(char *fileName)
 int closeFile(int fileDescriptor)
 {
 	/* Se comprueba si el descriptor es correcto*/
-	if ((fileDescriptor < 0) || (fileDescriptor > (sbloque.numInodos -1)))
+	if ((fileDescriptor < 0) || (fileDescriptor >= sbloque.numInodos))
 	{
 		return -1;
 	}
@@ -233,7 +231,39 @@ int writeFile(int fileDescriptor, void *buffer, int numBytes)
  */
 int lseekFile(int fileDescriptor, long offset, int whence)
 {
-	return -1;
+	/* Se comprueba si el descriptor de fichero corresponde a un fichero */
+	if (fileDescriptor < 0 || fileDescriptor >= sbloque.numInodos)
+	{
+		return -1;
+	}
+	/* Se comprueba si el offset es menor que 0 */
+	if (offset < 0)
+	{
+		return -1;
+	}
+	/* En función del parámetro whence */
+	switch (whence)
+	{	
+		case FS_SEEK_BEGIN :
+		/* Se establece el puntero de lectura-escritura al principio del fichero */
+		punteros_lec_esc[fileDescriptor] = 0;
+		break;
+
+		case FS_SEEK_END :
+		/* Se establece el puntero de lectura-escritura al final del fichero */
+		punteros_lec_esc[fileDescriptor] = sbloque.inodos[fileDescriptor].tamDispositivo;
+		break;
+
+		case FS_SEEK_CUR :
+		/* Se establece el puntero de lectura-escritura a offset bytes de su posición actual */
+		punteros_lec_esc[fileDescriptor] += offset;
+		break;
+
+		default :
+		/* Si el valor de whence no era válido, se devuelve -1 */
+		return -1;
+	}
+	return 0;
 }
 
 /*
