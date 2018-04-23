@@ -246,7 +246,7 @@ int lseekFile(int fileDescriptor, long offset, int whence)
 
 		case FS_SEEK_END :
 		/* Se establece el puntero de lectura-escritura al final del fichero */
-		punteros_lec_esc[fileDescriptor] = sbloque.inodos[fileDescriptor].tamDispositivo;
+		punteros_lec_esc[fileDescriptor] = inodos[fileDescriptor].tamanyo;
 		break;
 
 		case FS_SEEK_CUR :
@@ -255,10 +255,10 @@ int lseekFile(int fileDescriptor, long offset, int whence)
 		{
 			/* Se comprueba si se traspasa el final de fichero */
 			
-			if ((punteros_lec_esc[fileDescriptor] + offset) > sbloque.inodos[fileDescriptor].tamDispositivo)
+			if ((punteros_lec_esc[fileDescriptor] + offset) > inodos[fileDescriptor].tamanyo)
 			{
 				
-				punteros_lec_esc[fileDescriptor] = sbloque.inodos[fileDescriptor].tamDispositivo;
+				punteros_lec_esc[fileDescriptor] = inodos[fileDescriptor].tamanyo;
 			} else {
 				punteros_lec_esc[fileDescriptor] += offset;
 			}
