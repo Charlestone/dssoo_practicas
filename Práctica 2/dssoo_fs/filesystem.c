@@ -14,7 +14,7 @@
 
 static superbloque sbloque;						// Estructura para almacenar el superbloque
 static inodo inodos[MAX_INODOS];						// Estructura para almacenar los inodos
-static unsigned int inodos_uso[MAX_INODOS];				// Estructura auxiliar para controlar si los inodos están abiertos
+static unsigned int inodos_abierto[MAX_INODOS];				// Estructura auxiliar para controlar si los inodos están abiertos
 static unsigned int punteros_lec_esc[MAX_INODOS];		// Estructura auxiliar para almacenar punteros de lectura y escritura
 /*
  * @brief 	Generates the proper file system structure in a storage device, as designed by the student.
@@ -92,10 +92,10 @@ int mountFS(void)
  */
 int unmountFS(void)
 {
-	/* Se comprueba si hay algún inodo en uso */
+	/* Se comprueba si hay algún inodo abierto */
 	for (int i = 0; i < sbloque.numInodos; ++i)
 	{
-		if (inodos_uso[i] != 0)
+		if (inodos_abierto[i] != 0)
 		{
 			return -1;
 		}
@@ -177,11 +177,11 @@ int openFile(char *fileName)
 	{
 		return -1;
 	}
-	/* Se comprueba que no este en uso */
-	if (inodos_uso[inodo] == 0)
+	/* Se comprueba que no este abierto */
+	if (inodos_abierto[inodo] == 0)
 	{
-		/* Se marca como en uso */
-		inodos_uso[inodo] = 1;
+		/* Se marca como abierto */
+		inodos_abierto[inodo] = 1;
 		/* Se restauran sus punteros de lectura y escritura */
 		punteros_lec_esc[inodo] = 0;
 
@@ -202,7 +202,7 @@ int closeFile(int fileDescriptor)
 		return -1;
 	}
 	/* Le asignamos el valor 0 para indicar que esta no esta abierto*/
-	inodos_uso[fileDescriptor] = 0;
+	inodos_abierto[fileDescriptor] = 0;
 	return 0;
 }
 
@@ -236,11 +236,6 @@ int lseekFile(int fileDescriptor, long offset, int whence)
 	{
 		return -1;
 	}
-	/* Se comprueba si el offset es menor que 0 */
-	if (offset < 0)
-	{
-		return -1;
-	}
 	/* En función del parámetro whence */
 	switch (whence)
 	{	
@@ -255,8 +250,27 @@ int lseekFile(int fileDescriptor, long offset, int whence)
 		break;
 
 		case FS_SEEK_CUR :
-		/* Se establece el puntero de lectura-escritura a offset bytes de su posición actual */
-		punteros_lec_esc[fileDescriptor] += offset;
+		/* Si el offset es positivo */
+		if (offset >= 0)
+		{
+			/* Se comprueba si se traspasa el final de fichero */
+			
+			if ((punteros_lec_esc[fileDescriptor] + offset) > sbloque.inodos[fileDescriptor].tamDispositivo)
+			{
+				
+				punteros_lec_esc[fileDescriptor] = sbloque.inodos[fileDescriptor].tamDispositivo;
+			} else {
+				punteros_lec_esc[fileDescriptor] += offset;
+			}
+		} else {
+			if ((punteros_lec_esc[fileDescriptor] + offset) < 0)
+			{
+				
+				punteros_lec_esc[fileDescriptor] = 0;
+			} else {
+				punteros_lec_esc[fileDescriptor] += offset;
+			}
+		}
 		break;
 
 		default :
