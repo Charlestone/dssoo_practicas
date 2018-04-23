@@ -12,10 +12,11 @@
 #include "include/crc.h"			// Headers for the CRC functionality
 #include <string.h> 				// Header para utilizar memcpy
 
-static superbloque sbloque;						// Estructura para almacenar el superbloque
-static inodo inodos[MAX_INODOS];						// Estructura para almacenar los inodos
-static unsigned int inodos_abierto[MAX_INODOS];				// Estructura auxiliar para controlar si los inodos están abiertos
-static unsigned int punteros_lec_esc[MAX_INODOS];		// Estructura auxiliar para almacenar punteros de lectura y escritura
+static superbloque sbloque;								// Estructura para almacenar el superbloque
+static inodo inodos [MAX_INODOS];						// Estructura para almacenar los inodos
+static unsigned int inodos_abierto [MAX_INODOS];		// Estructura auxiliar para controlar si los inodos están abiertos
+static unsigned int punteros_lec_esc [MAX_INODOS];		// Estructura auxiliar para almacenar punteros de lectura y escritura
+			
 /*
  * @brief 	Generates the proper file system structure in a storage device, as designed by the student.
  * @return 	0 if success, -1 otherwise.
@@ -134,26 +135,48 @@ int unmountFS(void)
 int createFile(char *fileName)
 {
 	/* Se comprueba si el nombre ya existe */
-	if (namei(fileName) == -1)
+	int in = namei(fileName);
+	if (in != -1)
 	{
-		return -1;
+		if (bitmap_getbit(sbloque.bmapai, in) == 1)
+		{
+			return -1;
+		}
 	}
 	/* Se compruena si hay un inodo libre */
 	int inodo = ialloc();
 	if (inodo == -1)
 	{
+		/* Si no, se devuelve -2 */
 		return -2;
 	}
 	/* Se comprueba si hay un bloque para el indice fichero */
-	int bloque = alloc();
-	if (bloque == -1)
+	int bloquei = alloc();
+	if (bloquei == -1)
 	{
+		/* Si no, se libera el inodo reservado y se devuelve -2 */
+		ifree(inodo);
 		return -2;
 	}
-	/*  */
-	/* Si hay un inodo y un bloque */
+	/* Se comprueba si hay un bloque para almacenar datos */
+	int bloque1 = alloc();
+	if (bloque1 == -1)
+	{
+		/* Si no, se liberan el inodo reservado y el bloque índice, y se devuelve -2 */
+		ifree(inodo);
+		bfree(bloquei);
+		return -2;
+	} 
+	/* Si hay un inodo, un bloque índice y un bloque para datos, se crea el fichero */
+	inodos[inodo].tamanyo = 0;
+	inodos[inodo].bloqueIndirecto = bloque1;
+	strcpy(inodos[inodo].nombre, fileName);
+	char aux [BLOCK_SIZE];
+	bread(DEVICE_IMAGE, META_BLOCKS + bloque1 , aux);
+	//char const auxc [BLOCK_SIZE] = aux;
+	//inodos[inodo].CRC = CRC32(auxc, BLOCK_SIZE, 0);
 
-	return -2;
+	return 0;
 }
 
 /*
@@ -162,7 +185,41 @@ int createFile(char *fileName)
  */
 int removeFile(char *fileName)
 {
-	return -2;
+	/* Se comprueba si hay algun fichero con ese nombre */
+    int inodo = namei(fileName);
+    if (inodo == -1)
+    {
+        return -1;
+    }
+    /* Se comprueba si el fichero está cerrado */
+    if (inodos_abierto[inodo] != 0)
+    {
+    	return -2;
+    }
+    /* Se liberan los bloques de datos */
+    char aux [BLOCK_SIZE];
+    bread(DEVICE_IMAGE, META_BLOCKS + inodos[inodo].bloqueIndirecto, aux);
+    uint16_t indice[512];
+    memcpy(&indice, &aux, 1024);
+    for (int i = 0; i < sizeof(indice)/sizeof(uint16_t); ++i)
+    {
+    	if (indice[i] == 0)
+    	{
+    		break;
+    	}
+    	bfree(indice[i]);
+    }
+    /* Se libera el bloque de indices*/
+    if (bfree(inodos[inodo].bloqueIndirecto) == -1)
+    {
+        return -2;
+    }
+    /* Se libera el bloque de inodos */
+    if (ifree(inodo) == -1)
+    {
+        return -2;
+    }
+    return 0;
 }
 
 /*
@@ -198,6 +255,11 @@ int closeFile(int fileDescriptor)
 {
 	/* Se comprueba si el descriptor es correcto*/
 	if ((fileDescriptor < 0) || (fileDescriptor >= sbloque.numInodos))
+	{
+		return -1;
+	}
+	/* Se comprueba si ya estaba cerrado */
+	if (inodos_abierto[fileDescriptor] == 0)
 	{
 		return -1;
 	}
@@ -309,7 +371,7 @@ int checkFile(char *fileName)
 int ialloc(void)
 {
 	/* Se recorre el mapa de bits de inodos buscando uno libre */
-	for (int i = 0; i < sbloque.numInodos; ++i)
+	for (int i =0; i < sbloque.numInodos; ++i)
 	{
 		/* Cuando se encuentra el primero */
 		if (bitmap_getbit(sbloque.bmapai, i) == 0)
@@ -327,12 +389,12 @@ int ialloc(void)
 }
 
 /*
- * @brief 	Devuelve el primer bloque libre en el sistema de ficheros
+ * @brief 	Devuelve el primer bloque de datos libre en el sistema de ficheros
  * @return 	Número del primer bloque libre, -1 si no hay bloques libres.
  */
 int alloc(void)
 {
-	/* Se recorre el mapa de bits de inodos buscando uno libre */
+	/* Se recorre el mapa de bits de bloques de datos buscando uno libre */
 	for (int i = 0; i < sbloque.numBloquesDatos; ++i)
 	{
 		/* Cuando se encuentra el primero */
@@ -343,7 +405,7 @@ int alloc(void)
 			/* Se vacía */
 			char aux[BLOCK_SIZE];
 			memset(&aux, '0', BLOCK_SIZE);
-			bwrite(DEVICE_IMAGE, 1 + i, aux);
+			bwrite(DEVICE_IMAGE, META_BLOCKS + i , aux);
 			/* Y se devuelve */
 			return i;
 		}
