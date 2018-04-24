@@ -274,7 +274,26 @@ int closeFile(int fileDescriptor)
  */
 int readFile(int fileDescriptor, void *buffer, int numBytes)
 {
-	return -1;
+	/* Se comprueba que el descriptor sea correcto */
+	if ((fileDescriptor < 0) || (fileDescriptor >= sbloque.numInodos))
+	{
+		return -1;
+	}
+
+	/* Se comprueba que el numero de bytes a leer sea correcto */
+	if(numBytes < 0 || numBytes > inodos[fileDescriptor].tamanyo )
+	{
+		return -1;
+	}
+	/* Se comprueba si el fichero esta abierto*/
+	if (inodos_abierto[fileDescriptor] != 0)
+	{
+		return -1;
+	}
+
+
+	/* Devolvemos el numero de bytes leidos*/
+	return numBytes; 
 }
 
 /*
@@ -283,7 +302,24 @@ int readFile(int fileDescriptor, void *buffer, int numBytes)
  */
 int writeFile(int fileDescriptor, void *buffer, int numBytes)
 {
-	return -1;
+	/* Se comprueba que el descriptor sea correcto */
+	if ((fileDescriptor < 0) || (fileDescriptor >= sbloque.numInodos))
+	{
+		return -1;
+	}
+	/* Se comprueba que el numero de bytes a leer sea correcto */
+	if(numBytes < 0 || numBytes > inodos[fileDescriptor].tamanyo )
+	{
+		return -1;
+	}
+	/* Se comprueba si el fichero esta abierto*/
+	if (inodos_abierto[fileDescriptor] != 0)
+	{
+		return -1;
+	}
+
+	/* Devolvemos el numero de bytes leidos*/
+	return numBytes; 
 }
 
 
