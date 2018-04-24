@@ -173,8 +173,7 @@ int createFile(char *fileName)
 	strcpy(inodos[inodo].nombre, fileName);
 	char aux [BLOCK_SIZE];
 	bread(DEVICE_IMAGE, META_BLOCKS + bloque1 , aux);
-	//char const auxc [BLOCK_SIZE] = aux;
-	//inodos[inodo].CRC = CRC32(auxc, BLOCK_SIZE, 0);
+	inodos[inodo].CRC = CRC32((const unsigned char *) aux, BLOCK_SIZE, 0);
 
 	return 0;
 }
@@ -280,8 +279,8 @@ int readFile(int fileDescriptor, void *buffer, int numBytes)
 		return -1;
 	}
 
-	/* Se comprueba que el numero de bytes a leer sea correcto */
-	if(numBytes < 0 || numBytes > inodos[fileDescriptor].tamanyo )
+	/* Se comprueba que el numero de bytes a leer sea positivo */
+	if(numBytes < 0)
 	{
 		return -1;
 	}
@@ -290,11 +289,35 @@ int readFile(int fileDescriptor, void *buffer, int numBytes)
 	{
 		return -1;
 	}
+	int leidos = 0;
+	uint16_t indice [512];
+	char aux [BLOCK_SIZE];
+	memset(&indice, '0', sizeof(indice));
+	memset(&aux, '0', BLOCK_SIZE);
+	bread(DEVICE_IMAGE, META_BLOCKS + inodos[fileDescriptor].bloqueIndirecto, aux);
+	memcpy(&indice, &aux, sizeof(indice));
+	if (numBytes > (inodos[fileDescriptor].tamanyo - punteros_lec_esc[fileDescriptor]))
+	{
+		numBytes = (inodos[fileDescriptor].tamanyo - punteros_lec_esc[fileDescriptor]);
+	}
+	while((numBytes - leidos) != 0) {
+	    memset(&aux, '0', BLOCK_SIZE);
+	    bread(DEVICE_IMAGE, indice[(int) punteros_lec_esc[fileDescriptor]/BLOCK_SIZE] , aux);
+	    if (numBytes-leidos > BLOCK_SIZE)
+	    {
+	    	memcpy(&buffer + leidos, &aux + punteros_lec_esc[fileDescriptor]%BLOCK_SIZE, 2048 - punteros_lec_esc[fileDescriptor]%BLOCK_SIZE);
+	    	leidos += 2048 - punteros_lec_esc[fileDescriptor];
+	    	punteros_lec_esc[fileDescriptor] += leidos;
 
-
+	    } else {
+	    	memcpy(&buffer + leidos, &aux + punteros_lec_esc[fileDescriptor]%BLOCK_SIZE, numBytes - leidos);
+	    	leidos = numBytes;
+	    }
+	}
 	/* Devolvemos el numero de bytes leidos*/
-	return numBytes; 
+	return leidos; 
 }
+
 
 /*
  * @brief	Writes a number of bytes from a buffer and into a file.
