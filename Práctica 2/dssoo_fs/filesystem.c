@@ -167,11 +167,22 @@ int createFile(char *fileName)
 		bfree(bloquei);
 		return -2;
 	} 
-	/* Si hay un inodo, un bloque índice y un bloque para datos, se crea el fichero */
+	/* Si hay un inodo, un bloque índice y un bloque para datos disponibles, se crea el fichero */
+	/* Se establece su tamaño */
 	inodos[inodo].tamanyo = 0;
-	inodos[inodo].bloqueIndirecto = bloque1;
-	strcpy(inodos[inodo].nombre, fileName);
+	/* Se le asigna el índice */	
+	inodos[inodo].bloqueIndirecto = bloquei;
+	/* Se pone el primer bloque en el índice */	
+	uint16_t indice1 = (uint16_t) bloque1;
 	char aux [BLOCK_SIZE];
+	memcpy(&aux, &indice1, sizeof(indice1));
+	/* Se escribe el índice en el bloque */	
+	bwrite(DEVICE_IMAGE, META_BLOCKS + inodos[inodo].bloqueIndirecto, aux);
+	/* Se le asigna el nombre */	
+	strcpy(inodos[inodo].nombre, fileName);
+	/* Se limpia el buffer para leer el primer bloque */
+	memset(&aux, '0', BLOCK_SIZE);
+	/* Se hace el CRC del primer bloque y se le asigna al inodo */
 	bread(DEVICE_IMAGE, META_BLOCKS + bloque1 , aux);
 	inodos[inodo].CRC = CRC32((const unsigned char *) aux, BLOCK_SIZE, 0);
 
