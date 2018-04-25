@@ -37,8 +37,14 @@ int mkFS(long deviceSize)
 		sbloque.numBloquesDatos = deviceSize/BLOCK_SIZE;
 	}
 	/* Se ponen a 0 los mapas de bits */
-	memset(&sbloque.bmapai, '0', sizeof(sbloque.bmapai));
-	memset(&sbloque.bmapab, '0', sizeof(sbloque.bmapab));
+	for (int i = 0; i < sbloque.numInodos; ++i)
+	{
+		bitmap_setbit(sbloque.bmapai, i, 0);
+	}
+	for (int i = 0; i < sbloque.numBloquesDatos; ++i)
+	{
+		bitmap_setbit(sbloque.bmapab, i, 0);
+	}
 	/* Se establece el tamaño del dispositivo */
 	sbloque.tamDispositivo = sbloque.numBloquesDatos * BLOCK_SIZE;
 	/* Buffer auxiliar para escribir el superbloque */
@@ -311,14 +317,19 @@ int readFile(int fileDescriptor, void *buffer, int numBytes)
 	{
 		return -1;
 	}
+	/* Se comprueba que la longitud del buffer no es menor que el número de bytes a leer */
+	if (sizeof(buffer) < numBytes)
+	{
+		return -1;
+	}
 	/* Se comprueba si el fichero esta abierto*/
-	if (inodos_abierto[fileDescriptor] != 0)
+	if (inodos_abierto[fileDescriptor] == 0)
 	{
 		return -1;
 	}
 	int leidos = 0;
 	/* Se lee del disco el índice del fichero */
-	uint16_t indice [512];
+	uint16_t indice [MAX_FILE_SIZE/BLOCK_SIZE];
 	char aux [BLOCK_SIZE];
 	memset(&indice, '0', sizeof(indice));
 	memset(&aux, '0', BLOCK_SIZE);
@@ -349,7 +360,7 @@ int readFile(int fileDescriptor, void *buffer, int numBytes)
 	    	/* Se leen tantos bytes como quedan por leer en bloque en el que está el puntero */
 	    	memcpy(&buffer + leidos, &aux + punteros_lec_esc[fileDescriptor]%BLOCK_SIZE, numBytes - leidos);
 	    	/* Y se actualizan el número de bytes leídos y el puntero */
-	    	leidos += numBytes;
+	    	leidos += numBytes - leidos;
 	    	punteros_lec_esc[fileDescriptor] += (numBytes - leidos);
 	    }
 	}
@@ -380,15 +391,20 @@ int writeFile(int fileDescriptor, void *buffer, int numBytes)
 	{
 		return -1;
 	}
+	/* Se comprueba que la longitud del buffer no es menor que el número de bytes a escribir */
+	if (sizeof(buffer) < numBytes)
+	{
+		return -1;
+	}
 	/* Se comprueba si el fichero esta abierto*/
-	if (inodos_abierto[fileDescriptor] != 0)
+	if (inodos_abierto[fileDescriptor] == 0)
 	{
 		return -1;
 	}
 	int puntero_inicio = punteros_lec_esc[fileDescriptor];
 	int escritos = 0;
 	/* Se lee del disco el índice del fichero */
-	uint16_t indice [512];
+	uint16_t indice [MAX_FILE_SIZE/BLOCK_SIZE];
 	char aux [BLOCK_SIZE];
 	memset(&indice, '0', sizeof(indice));
 	memset(&aux, '0', BLOCK_SIZE);
@@ -399,7 +415,7 @@ int writeFile(int fileDescriptor, void *buffer, int numBytes)
 	{
 		memset(&aux, '0', BLOCK_SIZE);
 		/* Se comprueba si se va a exceder el tamaño máximo de fichero */
-		if ((int) punteros_lec_esc[fileDescriptor]/BLOCK_SIZE > 511)
+		if (((int) punteros_lec_esc[fileDescriptor]/BLOCK_SIZE) > (MAX_FILE_SIZE/BLOCK_SIZE) -1)
 		{
 			break;
 		} else {
@@ -430,7 +446,7 @@ int writeFile(int fileDescriptor, void *buffer, int numBytes)
 	    	/* Se escriben tantos bytes como quedan por escribir en el bloque en el que está el puntero */
 	    	memcpy(&aux + punteros_lec_esc[fileDescriptor]%BLOCK_SIZE, &buffer + escritos, numBytes - escritos);
 	    	/* Y se actualizan el número de bytes leídos y el puntero */
-	    	escritos += numBytes;
+	    	escritos += numBytes - escritos;
 	    	punteros_lec_esc[fileDescriptor] += (numBytes - escritos);
 	    }
 	    /* Se escribe el bloque en el disco */
