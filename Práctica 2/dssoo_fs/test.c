@@ -102,13 +102,13 @@ int main() {
 	for (int i = 0; i < 40; ++i)
 	{
 		char a = i;
-		ret = createFile(a);
+		ret = createFile(&a);
 		if (ret != 0 && i != 39)
 		{
 			fprintf(stdout, "%s%s%s%s%s", ANSI_COLOR_BLUE, "No se pueden crear más de 40 ficheros ", ANSI_COLOR_RED, "FALSO\n", ANSI_COLOR_RESET);
 			break;
 		}
-		if (ret == -1 && i = 39)
+		if (ret == -1 && i == 39)
 		{
 			fprintf(stdout, "%s%s%s%s%s", ANSI_COLOR_BLUE, "No se pueden crear más de 40 ficheros ", ANSI_COLOR_GREEN, "VERDADERO\n", ANSI_COLOR_RESET);
 		}
@@ -119,7 +119,7 @@ int main() {
 	lleno[0] = 1;
 	lleno[66523] = 1; 
 	lleno [131071] = 1;
-	escritos = writeFile(0, lleno, sizeof(lleno);
+	escritos = writeFile(0, lleno, sizeof(lleno));
 	if (escritos != -1)
 	{
 		fprintf(stdout, "%s%s%s%s%s", ANSI_COLOR_BLUE, "No se puede escribir en un fichero sin abrir ", ANSI_COLOR_RED, "FALSO\n", ANSI_COLOR_RESET);
@@ -148,7 +148,7 @@ int main() {
 	/* Se comprueba que se puede abrir un fichero que existe */
 	/* CP14 */
 	fd = openFile("test.txt");
-	if (fd != -1)
+	if (fd == -1)
 	{
 		fprintf(stdout, "%s%s%s%s%s", ANSI_COLOR_BLUE, "Se puede abrir un fichero que existe ", ANSI_COLOR_RED, "FALSO\n", ANSI_COLOR_RESET);
 	} else {
@@ -165,7 +165,7 @@ int main() {
 	}
 	/* Se comprueba que no se puede escribir en un descriptor inválido */
 	/* CP */
-	escritos = writeFile(-1, lleno, sizeof(lleno);
+	escritos = writeFile(-1, lleno, sizeof(lleno));
 		if (escritos != -1)
 	{
 		fprintf(stdout, "%s%s%s%s%s", ANSI_COLOR_BLUE, "No se puede escribir en descriptor inválido ", ANSI_COLOR_RED, "FALSO\n", ANSI_COLOR_RESET);
@@ -176,9 +176,9 @@ int main() {
 	leidos = readFile(0, aux, sizeof(aux));
 	if (leidos != -1)
 	{
-		fprintf(stdout, "%s%s%s%s%s", ANSI_COLOR_BLUE, "No se puede leer en un fichero sin abrir ", ANSI_COLOR_RED, "FALSO\n", ANSI_COLOR_RESET);
+		fprintf(stdout, "%s%s%s%s%s", ANSI_COLOR_BLUE, "No se puede leer de un descriptor inválido ", ANSI_COLOR_RED, "FALSO\n", ANSI_COLOR_RESET);
 	} else {
-		fprintf(stdout, "%s%s%s%s%s", ANSI_COLOR_BLUE, "No se puede leer en un fichero sin abrir ", ANSI_COLOR_GREEN, "VERDADERO\n", ANSI_COLOR_RESET);
+		fprintf(stdout, "%s%s%s%s%s", ANSI_COLOR_BLUE, "No se puede leer de un descriptor inválido ", ANSI_COLOR_GREEN, "VERDADERO\n", ANSI_COLOR_RESET);
 	}
 	/* Se comprueba si se puede escribir en un fichero y si este se puede ampliar hasta 1 MiB */
 	if (escritos == 4096)
