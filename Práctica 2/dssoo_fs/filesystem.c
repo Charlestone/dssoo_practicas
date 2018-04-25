@@ -299,14 +299,14 @@ int readFile(int fileDescriptor, void *buffer, int numBytes)
 	{
 		return -1;
 	} else {
-		/* Y si ese archivo es un residuo */
+		/* Y que ese archivo no sea un residuo */
 		if (bitmap_getbit(sbloque.bmapai, fileDescriptor) == 0)
 		{
 			return -1;
 		}
 	}
 
-	/* Se comprueba que el numero de bytes a leer sea mnayor que 0 */
+	/* Se comprueba que el numero de bytes a leer sea mayor que 0 */
 	if(numBytes <= 0)
 	{
 		return -1;
@@ -503,6 +503,7 @@ int lseekFile(int fileDescriptor, long offset, int whence)
 			{
 				return -1;
 			} else {
+				/* Se actualiza el puntero */
 				punteros_lec_esc[fileDescriptor] += offset;
 			}
 		} else {
@@ -511,6 +512,7 @@ int lseekFile(int fileDescriptor, long offset, int whence)
 			{
 				return -1;
 			} else {
+				/* Se actualiza el puntero */
 				punteros_lec_esc[fileDescriptor] += offset;
 			}
 		}
