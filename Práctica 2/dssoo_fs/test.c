@@ -98,6 +98,7 @@ int main() {
 		fprintf(stdout, "%s%s%s%s%s", ANSI_COLOR_BLUE, "No se pueden crear dos ficheros con el mismo nombre ", ANSI_COLOR_GREEN, "VERDADERO\n", ANSI_COLOR_RESET);
 	}
 	/* Se comprueba que no se pueden crear más de 40 ficheros */
+	/* CP 10 */
 	for (int i = 0; i < 40; ++i)
 	{
 		char a = i;
