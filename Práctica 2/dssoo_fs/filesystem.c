@@ -40,7 +40,7 @@ int mkFS(long deviceSize)
 	memset(&sbloque.bmapai, '0', sizeof(sbloque.bmapai));
 	memset(&sbloque.bmapab, '0', sizeof(sbloque.bmapab));
 	/* Se establece el tamaño del dispositivo */
-	sbloque.tamDispositivo = deviceSize;
+	sbloque.tamDispositivo = sbloque.numBloquesDatos * BLOCK_SIZE;
 	/* Buffer auxiliar para escribir el superbloque */
 	char aux [BLOCK_SIZE];
 	memcpy(&aux, &sbloque, BLOCK_SIZE);
@@ -73,7 +73,6 @@ int mountFS(void)
 	}
 	/* Se guarda en memoria */
 	memcpy(&sbloque, &aux, BLOCK_SIZE);
-	printf("%d\n", sbloque.numInodos);
 	/* Se borra aux */
 	memset(&aux, '0', BLOCK_SIZE);
 	/* Se lee el bloque que contiene los inodos */
@@ -134,14 +133,11 @@ int unmountFS(void)
  */
 int createFile(char *fileName)
 {
-	/* Se comprueba si el nombre ya existe */
+	/* Se comprueba si existe un archivo con ese nombre */
 	int in = namei(fileName);
 	if (in != -1)
 	{
-		if (bitmap_getbit(sbloque.bmapai, in) == 1)
-		{
-			return -1;
-		}
+		return -1;
 	}
 	/* Se compruena si hay un inodo libre */
 	int inodo = ialloc();
@@ -195,12 +191,12 @@ int createFile(char *fileName)
  */
 int removeFile(char *fileName)
 {
-	/* Se comprueba si hay algun fichero con ese nombre */
-    int inodo = namei(fileName);
-    if (inodo == -1)
-    {
-        return -1;
-    }
+	/* Se comprueba si existe un archivo con ese nombre */
+	int inodo = namei(fileName);
+	if (inodo == -1)
+	{
+		return -1;
+	} 
     /* Se comprueba si el fichero está cerrado */
     if (inodos_abierto[inodo] != 0)
     {
@@ -210,14 +206,17 @@ int removeFile(char *fileName)
     char aux [BLOCK_SIZE];
     bread(DEVICE_IMAGE, META_BLOCKS + inodos[inodo].bloqueIndirecto, aux);
     uint16_t indice[512];
-    memcpy(&indice, &aux, 1024);
+    memcpy(&indice, &aux, sizeof(indice));
     for (int i = 0; i < sizeof(indice)/sizeof(uint16_t); ++i)
     {
     	if (indice[i] == 0)
     	{
     		break;
     	}
-    	bfree(indice[i]);
+    	if (bfree(indice[i]) == -1)
+    	{
+    		return -2;
+    	}
     }
     /* Se libera el bloque de indices*/
     if (bfree(inodos[inodo].bloqueIndirecto) == -1)
@@ -241,6 +240,11 @@ int openFile(char *fileName)
 	/* Se comprueba si el nombre existe */
 	int inodo = namei(fileName);
 	if (inodo == -1)
+	{	
+		return -1;	
+	} 
+	/* Se comprueba la integridad del fichero */
+	if (checkFile(fileName) != 0)
 	{
 		return -1;
 	}
@@ -264,9 +268,15 @@ int openFile(char *fileName)
 int closeFile(int fileDescriptor)
 {
 	/* Se comprueba si el descriptor es correcto*/
-	if ((fileDescriptor < 0) || (fileDescriptor >= sbloque.numInodos))
+	if ((fileDescriptor < 0) || (fileDescriptor > sbloque.numInodos))
 	{
 		return -1;
+	} else {
+		/* Y si ese archivo es un residuo */
+		if (bitmap_getbit(sbloque.bmapai, fileDescriptor) == 0)
+		{
+			return -1;
+		}
 	}
 	/* Se comprueba si ya estaba cerrado */
 	if (inodos_abierto[fileDescriptor] == 0)
@@ -288,10 +298,16 @@ int readFile(int fileDescriptor, void *buffer, int numBytes)
 	if ((fileDescriptor < 0) || (fileDescriptor >= sbloque.numInodos))
 	{
 		return -1;
+	} else {
+		/* Y si ese archivo es un residuo */
+		if (bitmap_getbit(sbloque.bmapai, fileDescriptor) == 0)
+		{
+			return -1;
+		}
 	}
 
-	/* Se comprueba que el numero de bytes a leer sea positivo */
-	if(numBytes < 0)
+	/* Se comprueba que el numero de bytes a leer sea mnayor que 0 */
+	if(numBytes <= 0)
 	{
 		return -1;
 	}
@@ -301,28 +317,40 @@ int readFile(int fileDescriptor, void *buffer, int numBytes)
 		return -1;
 	}
 	int leidos = 0;
+	/* Se lee del disco el índice del fichero */
 	uint16_t indice [512];
 	char aux [BLOCK_SIZE];
 	memset(&indice, '0', sizeof(indice));
 	memset(&aux, '0', BLOCK_SIZE);
 	bread(DEVICE_IMAGE, META_BLOCKS + inodos[fileDescriptor].bloqueIndirecto, aux);
 	memcpy(&indice, &aux, sizeof(indice));
+	/* Si lo que se desea leer es mayor que lo que queda desde el puntero hasta el final del fichero */
 	if (numBytes > (inodos[fileDescriptor].tamanyo - punteros_lec_esc[fileDescriptor]))
-	{
+	{	
+		/* Lo que leerá será lo que quede desde el puntero hasta el final */
 		numBytes = (inodos[fileDescriptor].tamanyo - punteros_lec_esc[fileDescriptor]);
 	}
-	while((numBytes - leidos) != 0) {
+	/* Mientras quede algo por leer */
+	while((numBytes - leidos) != 0) 
+	{
 	    memset(&aux, '0', BLOCK_SIZE);
+	    /* Se lee el bloque en el que esté el puntero */
 	    bread(DEVICE_IMAGE, indice[(int) punteros_lec_esc[fileDescriptor]/BLOCK_SIZE] , aux);
-	    if (numBytes-leidos > BLOCK_SIZE)
+	    /* Si queda por leer más de lo que queda del bloque */
+	    if (numBytes-leidos > (BLOCK_SIZE-punteros_lec_esc[fileDescriptor]%BLOCK_SIZE))
 	    {
-	    	memcpy(&buffer + leidos, &aux + punteros_lec_esc[fileDescriptor]%BLOCK_SIZE, 2048 - punteros_lec_esc[fileDescriptor]%BLOCK_SIZE);
-	    	leidos += 2048 - punteros_lec_esc[fileDescriptor];
-	    	punteros_lec_esc[fileDescriptor] += leidos;
+	    	/* Se lee lo que queda del bloque en el que está el puntero */
+	    	memcpy(&buffer + leidos, &aux + punteros_lec_esc[fileDescriptor]%BLOCK_SIZE, BLOCK_SIZE - punteros_lec_esc[fileDescriptor]%BLOCK_SIZE);
+	    	/* Y se actualizan el número de bytes leídos y el puntero */
+	    	leidos += BLOCK_SIZE - (punteros_lec_esc[fileDescriptor]%BLOCK_SIZE);
+	    	punteros_lec_esc[fileDescriptor] += punteros_lec_esc[fileDescriptor]%BLOCK_SIZE;
 
 	    } else {
+	    	/* Se leen tantos bytes como quedan por leer en bloque en el que está el puntero */
 	    	memcpy(&buffer + leidos, &aux + punteros_lec_esc[fileDescriptor]%BLOCK_SIZE, numBytes - leidos);
-	    	leidos = numBytes;
+	    	/* Y se actualizan el número de bytes leídos y el puntero */
+	    	leidos += numBytes;
+	    	punteros_lec_esc[fileDescriptor] += (numBytes - leidos);
 	    }
 	}
 	/* Devolvemos el numero de bytes leidos*/
@@ -336,13 +364,19 @@ int readFile(int fileDescriptor, void *buffer, int numBytes)
  */
 int writeFile(int fileDescriptor, void *buffer, int numBytes)
 {
-	/* Se comprueba que el descriptor sea correcto */
+	//* Se comprueba que el descriptor sea correcto */
 	if ((fileDescriptor < 0) || (fileDescriptor >= sbloque.numInodos))
 	{
 		return -1;
+	} else {
+		/* Y si ese archivo es un residuo */
+		if (bitmap_getbit(sbloque.bmapai, fileDescriptor) == 0)
+		{
+			return -1;
+		}
 	}
-	/* Se comprueba que el numero de bytes a leer sea correcto */
-	if(numBytes < 0 || numBytes > inodos[fileDescriptor].tamanyo )
+	/* Se comprueba que el numero de bytes a leer sea mnayor que 0 */
+	if(numBytes <= 0)
 	{
 		return -1;
 	}
@@ -351,9 +385,82 @@ int writeFile(int fileDescriptor, void *buffer, int numBytes)
 	{
 		return -1;
 	}
-
-	/* Devolvemos el numero de bytes leidos*/
-	return numBytes; 
+	int puntero_inicio = punteros_lec_esc[fileDescriptor];
+	int escritos = 0;
+	/* Se lee del disco el índice del fichero */
+	uint16_t indice [512];
+	char aux [BLOCK_SIZE];
+	memset(&indice, '0', sizeof(indice));
+	memset(&aux, '0', BLOCK_SIZE);
+	bread(DEVICE_IMAGE, META_BLOCKS + inodos[fileDescriptor].bloqueIndirecto, aux);
+	memcpy(&indice, &aux, sizeof(indice));
+	/* Mientras quede por escribir */
+	while((numBytes - escritos) != 0) 
+	{
+		memset(&aux, '0', BLOCK_SIZE);
+		/* Se comprueba si se va a exceder el tamaño máximo de fichero */
+		if ((int) punteros_lec_esc[fileDescriptor]/BLOCK_SIZE > 511)
+		{
+			break;
+		} else {
+			/* Se comprueba si hay que expandir el fichero */
+			if (indice[(int) punteros_lec_esc[fileDescriptor]/BLOCK_SIZE] == 0)
+			{
+				/* Se comprueba si hay un bloque para expandir */
+				int in = alloc();
+				if ( in == -1)
+				{
+					break;
+				} 
+				/* Si lo hay, se expande */
+				indice[(int) punteros_lec_esc[fileDescriptor]/BLOCK_SIZE] = in;
+			}
+		}
+		/* Se lee el bloque en el que esté el puntero */
+	    bread(DEVICE_IMAGE, indice[(int) punteros_lec_esc[fileDescriptor]/BLOCK_SIZE] , aux);
+		/* Si queda por escribir más de lo que queda de bloque */
+	    if ((numBytes - escritos) > (BLOCK_SIZE-punteros_lec_esc[fileDescriptor]%BLOCK_SIZE))
+	    {
+	    	/* Se escribe lo que queda del bloque en el que está el puntero */
+	    	memcpy(&aux + punteros_lec_esc[fileDescriptor]%BLOCK_SIZE, &buffer + escritos, BLOCK_SIZE - punteros_lec_esc[fileDescriptor]%BLOCK_SIZE);
+	    	/* Y se actualizan el número de bytes escritos y el puntero */
+	    	escritos += BLOCK_SIZE - (punteros_lec_esc[fileDescriptor]%BLOCK_SIZE);
+	    	punteros_lec_esc[fileDescriptor] += punteros_lec_esc[fileDescriptor]%BLOCK_SIZE;
+	    } else {
+	    	/* Se escriben tantos bytes como quedan por escribir en el bloque en el que está el puntero */
+	    	memcpy(&aux + punteros_lec_esc[fileDescriptor]%BLOCK_SIZE, &buffer + escritos, numBytes - escritos);
+	    	/* Y se actualizan el número de bytes leídos y el puntero */
+	    	escritos += numBytes;
+	    	punteros_lec_esc[fileDescriptor] += (numBytes - escritos);
+	    }
+	    /* Se escribe el bloque en el disco */
+	    bwrite(DEVICE_IMAGE, META_BLOCKS + indice[(int) punteros_lec_esc[fileDescriptor]/BLOCK_SIZE], aux);
+	}
+	/* Escribimos el índice actualizado en el disco */
+	memset(&aux, '0', BLOCK_SIZE);
+	memcpy(&aux, &indice, sizeof(indice));
+	bwrite(DEVICE_IMAGE, META_BLOCKS + inodos[fileDescriptor].bloqueIndirecto, aux);
+	/* Actualizamos el tamaño del fichero si es necesario */
+	if (puntero_inicio + escritos > inodos[fileDescriptor].tamanyo)
+	{
+		inodos[fileDescriptor].tamanyo = puntero_inicio + escritos;
+	}
+	/* Se actualiza el CRC del archivo */
+	uint32_t CRC = 0;
+	/* Para ello, se recorre el índice */
+	for (int i = 0; i < sizeof(indice)/sizeof(uint16_t); ++i)
+	{
+		if (indice[i] == 0)
+		{
+			break;
+		}
+		memset(&aux, '0', BLOCK_SIZE);
+		bread(DEVICE_IMAGE, META_BLOCKS + indice[i], aux);
+		inodos[fileDescriptor].CRC = CRC32((const unsigned char *) aux, BLOCK_SIZE, CRC);
+		
+	}
+	/* Devolvemos el numero de bytes escritos*/
+	return escritos; 
 }
 
 
@@ -363,10 +470,16 @@ int writeFile(int fileDescriptor, void *buffer, int numBytes)
  */
 int lseekFile(int fileDescriptor, long offset, int whence)
 {
-	/* Se comprueba si el descriptor de fichero corresponde a un fichero */
-	if (fileDescriptor < 0 || fileDescriptor >= sbloque.numInodos)
+	//* Se comprueba que el descriptor sea correcto */
+	if ((fileDescriptor < 0) || (fileDescriptor >= sbloque.numInodos))
 	{
 		return -1;
+	} else {
+		/* Y si ese archivo es un residuo */
+		if (bitmap_getbit(sbloque.bmapai, fileDescriptor) == 0)
+		{
+			return -1;
+		}
 	}
 	/* En función del parámetro whence */
 	switch (whence)
@@ -385,20 +498,18 @@ int lseekFile(int fileDescriptor, long offset, int whence)
 		/* Si el offset es positivo */
 		if (offset >= 0)
 		{
-			/* Se comprueba si se traspasa el final de fichero */
-			
+			/* Se comprueba si se traspasa el final del fichero */
 			if ((punteros_lec_esc[fileDescriptor] + offset) > inodos[fileDescriptor].tamanyo)
 			{
-				
-				punteros_lec_esc[fileDescriptor] = inodos[fileDescriptor].tamanyo;
+				return -1;
 			} else {
 				punteros_lec_esc[fileDescriptor] += offset;
 			}
 		} else {
+			/* Se comprueba si se traspasa el principio del fichero */
 			if ((punteros_lec_esc[fileDescriptor] + offset) < 0)
 			{
-				
-				punteros_lec_esc[fileDescriptor] = 0;
+				return -1;
 			} else {
 				punteros_lec_esc[fileDescriptor] += offset;
 			}
@@ -427,7 +538,38 @@ int checkFS(void)
  */
 int checkFile(char *fileName)
 {
-	return -2;
+	/* Se comprueba si existe un archivo con ese nombre*/
+	int inodo = namei(fileName);
+	if (inodo == -1)
+	{
+		return -2;
+	}
+	/* Se lee del disco el índice del fichero */
+	uint16_t indice [512];
+	char aux [BLOCK_SIZE];
+	memset(&indice, '0', sizeof(indice));
+	memset(&aux, '0', BLOCK_SIZE);
+	bread(DEVICE_IMAGE, META_BLOCKS + inodos[inodo].bloqueIndirecto, aux);
+	memcpy(&indice, &aux, sizeof(indice));
+	/* Se realiza el CRC del archivo */
+	uint32_t CRC = 0;
+	/* Para ello, se recorre el índice */
+	for (int i = 0; i < sizeof(indice)/sizeof(uint16_t); ++i)
+	{
+		if (indice[i] == 0)
+		{
+			break;
+		}
+		memset(&aux, '0', BLOCK_SIZE);
+		bread(DEVICE_IMAGE, META_BLOCKS + indice[i], aux);
+		CRC = CRC32((const unsigned char *) aux, BLOCK_SIZE, CRC);
+		
+	}
+	if (inodos[inodo].CRC != CRC)
+	{
+		return -1;
+	}
+	return 0;
 }
 
 /*=============================================
@@ -496,11 +638,15 @@ int namei(char *fileName)
 		/* Cuando se encuentre uno con el mismo nombre */
 		if (strcmp(inodos[i].nombre, fileName) == 0)
 		{	
-			/* Se devuelve su número */
-			return i;
+			/* Se comprueba que no sea un residuo */
+			if (bitmap_getbit(sbloque.bmapai, i) == 1)
+			{
+				/* Se devuelve su número */
+				return i;
+			}
 		}
 	}
-	/* Si no hay ninguno con ese nomnbre, se devuelve -1 */
+	/* Si no hay ninguno con ese nombre, se devuelve -1 */
 	return -1;
 }
 
