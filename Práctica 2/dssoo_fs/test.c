@@ -166,7 +166,7 @@ int main() {
 		fprintf(stdout, "%s%s%s%s%s", ANSI_COLOR_BLUE, "No se puede abrir dos veces un fichero ", ANSI_COLOR_GREEN, "VERDADERO\n", ANSI_COLOR_RESET);
 	}
 	/* Se comprueba que no se puede escribir en un descriptor inválido */
-	/* CP */
+	/* CP 16*/
 	escritos = writeFile(-1, lleno, sizeof(lleno));
 	if (escritos != -1)
 	{
@@ -175,7 +175,7 @@ int main() {
 		fprintf(stdout, "%s%s%s%s%s", ANSI_COLOR_BLUE, "No se puede escribir en descriptor inválido ", ANSI_COLOR_GREEN, "VERDADERO\n", ANSI_COLOR_RESET);
 	}
 	/* Se comprueba que no se puede leer de un descriptor inválido */
-	/* CP */
+	/* CP 17 */
 	leidos = readFile(-1, aux, sizeof(aux));
 	if (leidos != -1)
 	{
@@ -184,7 +184,7 @@ int main() {
 		fprintf(stdout, "%s%s%s%s%s", ANSI_COLOR_BLUE, "No se puede leer de un descriptor inválido ", ANSI_COLOR_GREEN, "VERDADERO\n", ANSI_COLOR_RESET);
 	}
 	/* Se comprueba que se puede cerrar un fichero abierto */
-	/* CP */
+	/* CP 18*/
 	ret = closeFile(fd);
 	if (fd != 0)
 	{
@@ -193,7 +193,7 @@ int main() {
 		fprintf(stdout, "%s%s%s%s%s", ANSI_COLOR_BLUE, "Se puede cerrar un fichero abierto ", ANSI_COLOR_GREEN, "VERDADERO\n", ANSI_COLOR_RESET);
 	}
 	/* Se comprueba que no se puede cerrar un archivo ya cerrado */
-	/* CP */
+	/* CP 19 */
 	ret = closeFile(fd);
 	if (ret != -1)
 	{
@@ -202,7 +202,7 @@ int main() {
 		fprintf(stdout, "%s%s%s%s%s", ANSI_COLOR_BLUE, "No se puede cerrar un archivo ya cerrado ", ANSI_COLOR_GREEN, "VERDADERO\n", ANSI_COLOR_RESET);
 	}
 	/* Se comprueba que no se puede cerrar un archivo con descriptor de fichero inválido */
-	/* CP */
+	/* CP 20 */
 	ret = closeFile(-1);
 	if (ret != -1)
 	{
@@ -211,7 +211,7 @@ int main() {
 		fprintf(stdout, "%s%s%s%s%s", ANSI_COLOR_BLUE, "No se puede cerrar un decsriptor inválido ", ANSI_COLOR_GREEN, "VERDADERO\n", ANSI_COLOR_RESET);
 	}
 	/* Se comprueba si se puede escribir en un fichero */
-	/* CP */
+	/* CP 21 */
 	fd = openFile("test.txt");
 	escritos = writeFile(fd, lleno, 1);
 	if (escritos != 1)
@@ -221,7 +221,7 @@ int main() {
 		fprintf(stdout, "%s%s%s%s%s", ANSI_COLOR_BLUE, "Se puede escribir en un fichero ", ANSI_COLOR_GREEN, "VERDADERO\n", ANSI_COLOR_RESET);
 	}
 	/* Se comprueba que la función lseek admite whence 2 */
-	/* CP */
+	/* CP 22 */
 	ret = lseekFile(fd, 20, 2);
 	if (ret != 0)
 	{
@@ -230,7 +230,7 @@ int main() {
 		fprintf(stdout, "%s%s%s%s%s", ANSI_COLOR_BLUE, "La función lseek admite whence 2 ", ANSI_COLOR_GREEN, "VERDADERO\n", ANSI_COLOR_RESET);
 	}
 	/* Se comprueba que la función lseek admite numBytes positivo y que la función lseek admite whence 0*/
-	/* CP */
+	/* CP 23 */
 	ret = lseekFile(fd, 1, 0);
 	if (ret != 0)
 	{
@@ -239,7 +239,7 @@ int main() {
 		fprintf(stdout, "%s%s%s%s%s", ANSI_COLOR_BLUE, "La función lseek admite numBytes positivo y whence 0 ", ANSI_COLOR_GREEN, "VERDADERO\n", ANSI_COLOR_RESET);
 	}
 	/* Se comprueba que la función lseek admite numBytes negativo */
-	/* CP */
+	/* CP 24 */
 	ret = lseekFile(fd, -1, 0);
 	if (ret != 0)
 	{
@@ -248,16 +248,16 @@ int main() {
 		fprintf(stdout, "%s%s%s%s%s", ANSI_COLOR_BLUE, "La función lseek admite numBytes negativo ", ANSI_COLOR_GREEN, "VERDADERO\n", ANSI_COLOR_RESET);
 	}
 	/* Se comprueba que la función lseek no admite numBytes que sobrepasen los límtes del fichero desde la posición actual del puntero */
-	/* CP */
+	/* CP 25 */
 	ret = lseekFile(fd, 4000,  0);
 	if (ret != -1)
 	{
-		fprintf(stdout, "%s%s%s%s%s", ANSI_COLOR_BLUE, "La función lseek no admite numBytes que sobrepasen los límtes del fichero desde la posición actual del puntero ", ANSI_COLOR_RED, "FALSO\n", ANSI_COLOR_RESET);
+		fprintf(stdout, "%s%s%s%s%s", ANSI_COLOR_BLUE, "r ", ANSI_COLOR_RED, "FALSO\n", ANSI_COLOR_RESET);
 	} else {
 		fprintf(stdout, "%s%s%s%s%s", ANSI_COLOR_BLUE, "La función lseek no admite numBytes que sobrepasen los límtes del fichero desde la posición actual del puntero ", ANSI_COLOR_GREEN, "VERDADERO\n", ANSI_COLOR_RESET);
 	}
 	/* Se comprueba que la función lseek admite whence 1 */
-	/* CP */
+	/* CP 26 */
 	ret = lseekFile(fd, 20, 1);
 	if (ret != 0)
 	{
@@ -266,7 +266,7 @@ int main() {
 		fprintf(stdout, "%s%s%s%s%s", ANSI_COLOR_BLUE, "La función lseek admite whence 1 ", ANSI_COLOR_GREEN, "VERDADERO\n", ANSI_COLOR_RESET);
 	}
 	/* Se comprueba que la función lseek no admite valores de whence distintos de 0, 1, 2 */
-	/* CP */
+	/* CP 27 */
 	ret = lseekFile(fd, 20, 6);
 	if (ret != -1)
 	{
@@ -275,7 +275,7 @@ int main() {
 		fprintf(stdout, "%s%s%s%s%s", ANSI_COLOR_BLUE, "La función lseek no admite valores de whence distintos de 0, 1, 2 ", ANSI_COLOR_GREEN, "VERDADERO\n", ANSI_COLOR_RESET);
 	}
 	/* Se comprueba que se puede leer de un fichero */
-	/* CP */
+	/* CP 28 */
 	ret = lseekFile(fd, 0, 2);
 	leidos = readFile(fd, aux, 1);
 	if (leidos != 1)
@@ -285,7 +285,7 @@ int main() {
 		fprintf(stdout, "%s%s%s%s%s", ANSI_COLOR_BLUE, "Se puede leer de un fichero ", ANSI_COLOR_GREEN, "VERDADERO\n", ANSI_COLOR_RESET);
 	}
 	/* Se comprueba que lo leido es igual que lo escrito previamente sobre un mismo fichero */
-	/* CP */
+	/* CP 29 */
 	if (lleno[0] != (uint8_t) aux[0])
 	{
 		fprintf(stdout, "%s%s%s%s%s", ANSI_COLOR_BLUE, "Se lee lo mismo que se ha escrito en un fichero ", ANSI_COLOR_RED, "FALSO\n", ANSI_COLOR_RESET);
@@ -293,7 +293,7 @@ int main() {
 		fprintf(stdout, "%s%s%s%s%s", ANSI_COLOR_BLUE, "Se lee lo mismo que se ha escrito en un fichero ", ANSI_COLOR_GREEN, "VERDADERO\n", ANSI_COLOR_RESET);
 	}
 	/* Se comprueba si se puede leer un fichero entero en varias llamadas */
-	/* CP */
+	/* CP 30 */
 	escritos = writeFile(fd, lleno, 1);
 	ret = lseekFile(fd, 0, 2);
 	leidos = readFile(fd, aux, 1);
@@ -305,7 +305,7 @@ int main() {
 		fprintf(stdout, "%s%s%s%s%s", ANSI_COLOR_BLUE, "Se puede leer un fichero entero con varias llamadas a read ", ANSI_COLOR_RED, "FALSO\n", ANSI_COLOR_RESET);
 	}
 	/* Se comprueba que no se puede borrar un archivo si no está cerrado */
-	/* CP */
+	/* CP 31 */
 	ret = removeFile("test.txt");
 	if (ret != -2)
 	{
@@ -314,7 +314,7 @@ int main() {
 		fprintf(stdout, "%s%s%s%s%s", ANSI_COLOR_BLUE, "No se puede borrar un archivo si no está cerrado ", ANSI_COLOR_GREEN, "VERDADERO\n", ANSI_COLOR_RESET);
 	}
 	/* Se comprueba que se puede borrar un archivo ya cerrado */
-	/* CP */
+	/* CP 32 */
 	ret = closeFile(fd);
 	ret = removeFile("test.txt");
 	if (ret != 0)
@@ -324,7 +324,7 @@ int main() {
 		fprintf(stdout, "%s%s%s%s%s", ANSI_COLOR_BLUE, "Se puede borrar un archivo ya cerrado ", ANSI_COLOR_GREEN, "VERDADERO\n", ANSI_COLOR_RESET);
 	}
 	/* Se comprueba que no se puede borrar un fichero que no existe */
-	/* CP */
+	/* CP 33 */
 	ret = removeFile("noexisto.txt");
 	if (ret != -1)
 	{
@@ -333,7 +333,7 @@ int main() {
 		fprintf(stdout, "%s%s%s%s%s", ANSI_COLOR_BLUE, "No se puede borrar un fichero que no existe ", ANSI_COLOR_GREEN, "VERDADERO\n", ANSI_COLOR_RESET);
 	}
 	/* Se comprueba que se mantienen los metadatos después de un desmontaje */
-	/* CP */
+	/* CP 34 */
 	ret = unmountFS();
 	ret = mountFS();
 	ret = createFile("test.txt");
