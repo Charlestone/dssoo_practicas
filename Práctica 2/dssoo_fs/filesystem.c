@@ -402,7 +402,7 @@ int writeFile(int fileDescriptor, void *buffer, int numBytes)
 	{
 		memset(&aux, 0, BLOCK_SIZE);
 		/* Se comprueba si se va a exceder el tamaño máximo de fichero */
-		if (((int) punteros_lec_esc[fileDescriptor]/BLOCK_SIZE) > (MAX_FILE_SIZE/BLOCK_SIZE))
+		if (((int) punteros_lec_esc[fileDescriptor]) >= (MAX_FILE_SIZE))
 		{
 			break;
 		} else {
