@@ -334,6 +334,7 @@ int main() {
 	}
 	/* Se comprueba que se mantienen los metadatos después de un desmontaje */
 	/* CP 34 */
+	ret = createFile("test.txt");
 	ret = unmountFS();
 	ret = mountFS();
 	ret = createFile("test.txt");

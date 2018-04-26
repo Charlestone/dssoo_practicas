@@ -402,7 +402,7 @@ int writeFile(int fileDescriptor, void *buffer, int numBytes)
 	{
 		memset(&aux, 0, BLOCK_SIZE);
 		/* Se comprueba si se va a exceder el tamaño máximo de fichero */
-		if (((int) punteros_lec_esc[fileDescriptor]/BLOCK_SIZE) > (MAX_FILE_SIZE/BLOCK_SIZE) -1)
+		if (((int) punteros_lec_esc[fileDescriptor]/BLOCK_SIZE) > (MAX_FILE_SIZE/BLOCK_SIZE))
 		{
 			break;
 		} else {
@@ -428,7 +428,7 @@ int writeFile(int fileDescriptor, void *buffer, int numBytes)
 	    	memcpy(&aux + (punteros_lec_esc[fileDescriptor]%BLOCK_SIZE), &buffer + escritos, (BLOCK_SIZE-(punteros_lec_esc[fileDescriptor]%BLOCK_SIZE)));
 	    	/* Y se actualizan el número de bytes escritos y el puntero */
 	    	escritos += (BLOCK_SIZE-(punteros_lec_esc[fileDescriptor]%BLOCK_SIZE));
-	    	punteros_lec_esc[fileDescriptor] += punteros_lec_esc[fileDescriptor]%BLOCK_SIZE;
+	    	punteros_lec_esc[fileDescriptor] += BLOCK_SIZE-punteros_lec_esc[fileDescriptor]%BLOCK_SIZE;
 	    } else {
 	    	/* Se escriben tantos bytes como quedan por escribir en el bloque en el que está el puntero */
 	    	memcpy(&aux + (punteros_lec_esc[fileDescriptor]%BLOCK_SIZE), &buffer + escritos, numBytes - escritos);
