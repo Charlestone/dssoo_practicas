@@ -37,19 +37,13 @@ int mkFS(long deviceSize)
 		sbloque.numBloquesDatos = deviceSize/BLOCK_SIZE;
 	}
 	/* Se ponen a 0 los mapas de bits */
-	for (int i = 0; i < sbloque.numInodos; ++i)
-	{
-		bitmap_setbit(sbloque.bmapai, i, 0);
-	}
-	for (int i = 0; i < sbloque.numBloquesDatos; ++i)
-	{
-		bitmap_setbit(sbloque.bmapab, i, 0);
-	}
+	memset(sbloque.bmapai, 0, (sizeof(char)*5));
+	memset(sbloque.bmapab, 0, (sizeof(char)*640));
 	/* Se establece el tamaño del dispositivo */
 	sbloque.tamDispositivo = sbloque.numBloquesDatos * BLOCK_SIZE;
 	/* Buffer auxiliar para escribir el superbloque */
 	char aux [BLOCK_SIZE];
-	memcpy(&aux, &sbloque, BLOCK_SIZE);
+	memcpy(&aux, &sbloque, sizeof(superbloque));
 	/* Se escribe el superbloque en el disco */
 	if(bwrite(DEVICE_IMAGE, 0, aux) == -1)
 	{
@@ -57,8 +51,8 @@ int mkFS(long deviceSize)
 		return -1;
 	}
 	/* Se vacían los metadatos */
-	memset(&sbloque, '0', sizeof(sbloque));
-	memset(&inodos, '0', sizeof(inodos));
+	memset(&sbloque, 0, sizeof(superbloque));
+	memset(&inodos, 0, sizeof(inodo)*sbloque.numInodos);
 
 	return 0;
 }
@@ -78,9 +72,9 @@ int mountFS(void)
 		return -1;
 	}
 	/* Se guarda en memoria */
-	memcpy(&sbloque, &aux, BLOCK_SIZE);
+	memcpy(&sbloque, &aux, sizeof(superbloque));
 	/* Se borra aux */
-	memset(&aux, '0', BLOCK_SIZE);
+	memset(&aux, 0, BLOCK_SIZE);
 	/* Se lee el bloque que contiene los inodos */
 	if(bread(DEVICE_IMAGE, 1, aux) == -1)
 	{
@@ -88,7 +82,10 @@ int mountFS(void)
 		return -1;
 	}
 	/* Se guardan en memoria los inodos*/
-	memcpy(&inodos, &aux, sizeof(inodos));
+	memcpy(&inodos, &aux, sizeof(inodo)*sbloque.numInodos);
+	/* Se establece las estructuras auxiliares a 0 */
+	memset(&inodos_abierto, 0, sizeof(unsigned int)*sbloque.numInodos);
+	memset(&punteros_lec_esc, 0, sizeof(unsigned int)*sbloque.numInodos);
 	return 0;
 }
 
@@ -109,7 +106,7 @@ int unmountFS(void)
 	/* Buffer auxiliar para escribir el superbloque */
 	char aux [BLOCK_SIZE];
 	/* Se copia el superbloque a aux */
-	memcpy(&aux, &sbloque, BLOCK_SIZE);
+	memcpy(&aux, &sbloque, sizeof(superbloque));
 	/* Se escribe el superbloque en el disco */
 	if(bwrite(DEVICE_IMAGE, 0, aux) == -1)
 	{
@@ -117,9 +114,9 @@ int unmountFS(void)
 		return -1;
 	}
 	/* Se borra aux */
-	memset(&aux, '0', BLOCK_SIZE);
+	memset(&aux, 0, BLOCK_SIZE);
 	/* Se copian los inodos a aux */
-	memcpy(&aux, &inodos, sizeof(inodos));
+	memcpy(&aux, &inodos, sizeof(inodo)*sbloque.numInodos);
 	/* Se escriben los inodos en el disco */
 	if(bwrite(DEVICE_IMAGE, 1, aux) == -1)
 	{
@@ -127,8 +124,8 @@ int unmountFS(void)
 		return -1;
 	}
 	/* Se vacían los metadatos */
-	memset(&sbloque, '0', sizeof(sbloque));
-	memset(&inodos, '0', sizeof(inodos));
+	memset(&sbloque, 0, sizeof(superbloque));
+	memset(&inodos, 0, sizeof(inodo)*sbloque.numInodos);
 
 	return 0;
 }
@@ -177,13 +174,13 @@ int createFile(char *fileName)
 	/* Se pone el primer bloque en el índice */	
 	uint16_t indice1 = (uint16_t) bloque1;
 	char aux [BLOCK_SIZE];
-	memcpy(&aux, &indice1, sizeof(indice1));
+	memcpy(&aux, &indice1, sizeof(uint16_t));
 	/* Se escribe el índice en el bloque */	
 	bwrite(DEVICE_IMAGE, META_BLOCKS + inodos[inodo].bloqueIndirecto, aux);
 	/* Se le asigna el nombre */	
 	strcpy(inodos[inodo].nombre, fileName);
 	/* Se limpia el buffer para leer el primer bloque */
-	memset(&aux, '0', BLOCK_SIZE);
+	memset(&aux, 0, BLOCK_SIZE);
 	/* Se hace el CRC del primer bloque y se le asigna al inodo */
 	bread(DEVICE_IMAGE, META_BLOCKS + bloque1 , aux);
 	inodos[inodo].CRC = CRC32((const unsigned char *) aux, BLOCK_SIZE, 0);
@@ -212,8 +209,8 @@ int removeFile(char *fileName)
     char aux [BLOCK_SIZE];
     bread(DEVICE_IMAGE, META_BLOCKS + inodos[inodo].bloqueIndirecto, aux);
     uint16_t indice[512];
-    memcpy(&indice, &aux, sizeof(indice));
-    for (int i = 0; i < sizeof(indice)/sizeof(uint16_t); ++i)
+    memcpy(&indice, &aux, sizeof(uint16_t)*INDEX_SIZE);
+    for (int i = 0; i < INDEX_SIZE; ++i)
     {
     	if (indice[i] == 0)
     	{
@@ -317,11 +314,6 @@ int readFile(int fileDescriptor, void *buffer, int numBytes)
 	{
 		return -1;
 	}
-	/* Se comprueba que la longitud del buffer no es menor que el número de bytes a leer */
-	if (sizeof(buffer) < numBytes)
-	{
-		return -1;
-	}
 	/* Se comprueba si el fichero esta abierto*/
 	if (inodos_abierto[fileDescriptor] == 0)
 	{
@@ -329,12 +321,12 @@ int readFile(int fileDescriptor, void *buffer, int numBytes)
 	}
 	int leidos = 0;
 	/* Se lee del disco el índice del fichero */
-	uint16_t indice [MAX_FILE_SIZE/BLOCK_SIZE];
+	uint16_t indice [INDEX_SIZE];
 	char aux [BLOCK_SIZE];
-	memset(&indice, '0', sizeof(indice));
-	memset(&aux, '0', BLOCK_SIZE);
+	memset(&indice, 0, (sizeof(uint16_t)*INDEX_SIZE));
+	memset(&aux, 0, BLOCK_SIZE);
 	bread(DEVICE_IMAGE, META_BLOCKS + inodos[fileDescriptor].bloqueIndirecto, aux);
-	memcpy(&indice, &aux, sizeof(indice));
+	memcpy(&indice, &aux, (sizeof(uint16_t)*INDEX_SIZE));
 	/* Si lo que se desea leer es mayor que lo que queda desde el puntero hasta el final del fichero */
 	if (numBytes > (inodos[fileDescriptor].tamanyo - punteros_lec_esc[fileDescriptor]))
 	{	
@@ -344,7 +336,7 @@ int readFile(int fileDescriptor, void *buffer, int numBytes)
 	/* Mientras quede algo por leer */
 	while((numBytes - leidos) != 0) 
 	{
-	    memset(&aux, '0', BLOCK_SIZE);
+	    memset(&aux, 0, BLOCK_SIZE);
 	    /* Se lee el bloque en el que esté el puntero */
 	    bread(DEVICE_IMAGE, indice[(int) punteros_lec_esc[fileDescriptor]/BLOCK_SIZE] , aux);
 	    /* Si queda por leer más de lo que queda del bloque */
@@ -391,11 +383,6 @@ int writeFile(int fileDescriptor, void *buffer, int numBytes)
 	{
 		return -1;
 	}
-	/* Se comprueba que la longitud del buffer no es menor que el número de bytes a escribir */
-	if (sizeof(buffer) < numBytes)
-	{
-		return -1;
-	}
 	/* Se comprueba si el fichero esta abierto*/
 	if (inodos_abierto[fileDescriptor] == 0)
 	{
@@ -404,16 +391,16 @@ int writeFile(int fileDescriptor, void *buffer, int numBytes)
 	int puntero_inicio = punteros_lec_esc[fileDescriptor];
 	int escritos = 0;
 	/* Se lee del disco el índice del fichero */
-	uint16_t indice [MAX_FILE_SIZE/BLOCK_SIZE];
+	uint16_t indice [INDEX_SIZE];
 	char aux [BLOCK_SIZE];
-	memset(&indice, '0', sizeof(indice));
-	memset(&aux, '0', BLOCK_SIZE);
+	memset(&indice, 0, (sizeof(uint16_t)*INDEX_SIZE));
+	memset(&aux, 0, BLOCK_SIZE);
 	bread(DEVICE_IMAGE, META_BLOCKS + inodos[fileDescriptor].bloqueIndirecto, aux);
-	memcpy(&indice, &aux, sizeof(indice));
+	memcpy(&indice, &aux, (sizeof(uint16_t)*INDEX_SIZE));
 	/* Mientras quede por escribir */
 	while((numBytes - escritos) != 0) 
 	{
-		memset(&aux, '0', BLOCK_SIZE);
+		memset(&aux, 0, BLOCK_SIZE);
 		/* Se comprueba si se va a exceder el tamaño máximo de fichero */
 		if (((int) punteros_lec_esc[fileDescriptor]/BLOCK_SIZE) > (MAX_FILE_SIZE/BLOCK_SIZE) -1)
 		{
@@ -454,7 +441,7 @@ int writeFile(int fileDescriptor, void *buffer, int numBytes)
 	}
 	/* Escribimos el índice actualizado en el disco */
 	memset(&aux, '0', BLOCK_SIZE);
-	memcpy(&aux, &indice, sizeof(indice));
+	memcpy(&aux, &indice, (sizeof(uint16_t)*INDEX_SIZE));
 	bwrite(DEVICE_IMAGE, META_BLOCKS + inodos[fileDescriptor].bloqueIndirecto, aux);
 	/* Actualizamos el tamaño del fichero si es necesario */
 	if (puntero_inicio + escritos > inodos[fileDescriptor].tamanyo)
@@ -464,13 +451,13 @@ int writeFile(int fileDescriptor, void *buffer, int numBytes)
 	/* Se actualiza el CRC del archivo */
 	uint32_t CRC = 0;
 	/* Para ello, se recorre el índice */
-	for (int i = 0; i < sizeof(indice)/sizeof(uint16_t); ++i)
+	for (int i = 0; i < INDEX_SIZE; ++i)
 	{
 		if (indice[i] == 0)
 		{
 			break;
 		}
-		memset(&aux, '0', BLOCK_SIZE);
+		memset(&aux, 0, BLOCK_SIZE);
 		bread(DEVICE_IMAGE, META_BLOCKS + indice[i], aux);
 		inodos[fileDescriptor].CRC = CRC32((const unsigned char *) aux, BLOCK_SIZE, CRC);
 		
@@ -565,20 +552,20 @@ int checkFile(char *fileName)
 	/* Se lee del disco el índice del fichero */
 	uint16_t indice [512];
 	char aux [BLOCK_SIZE];
-	memset(&indice, '0', sizeof(indice));
-	memset(&aux, '0', BLOCK_SIZE);
+	memset(&indice, 0, sizeof(uint16_t)*INDEX_SIZE);
+	memset(&aux, 0, BLOCK_SIZE);
 	bread(DEVICE_IMAGE, META_BLOCKS + inodos[inodo].bloqueIndirecto, aux);
-	memcpy(&indice, &aux, sizeof(indice));
+	memcpy(&indice, &aux, sizeof(uint16_t)*INDEX_SIZE);
 	/* Se realiza el CRC del archivo */
 	uint32_t CRC = 0;
 	/* Para ello, se recorre el índice */
-	for (int i = 0; i < sizeof(indice)/sizeof(uint16_t); ++i)
+	for (int i = 0; i < INDEX_SIZE; ++i)
 	{
 		if (indice[i] == 0)
 		{
 			break;
 		}
-		memset(&aux, '0', BLOCK_SIZE);
+		memset(&aux, 0, BLOCK_SIZE);
 		bread(DEVICE_IMAGE, META_BLOCKS + indice[i], aux);
 		CRC = CRC32((const unsigned char *) aux, BLOCK_SIZE, CRC);
 		
@@ -609,7 +596,7 @@ int ialloc(void)
 			/* Se marca como en uso */
 			bitmap_setbit(sbloque.bmapai, i, 1);
 			/* Se vacía */
-			memset(&inodos[i], '0', sizeof(inodo));
+			memset(&inodos[i], 0, sizeof(inodo));
 			/* Y se devuelve */
 			return i;
 		}
@@ -634,7 +621,7 @@ int alloc(void)
 			bitmap_setbit(sbloque.bmapab, i, 1);
 			/* Se vacía */
 			char aux[BLOCK_SIZE];
-			memset(&aux, '0', BLOCK_SIZE);
+			memset(&aux, 0, BLOCK_SIZE);
 			bwrite(DEVICE_IMAGE, META_BLOCKS + i , aux);
 			/* Y se devuelve */
 			return i;
