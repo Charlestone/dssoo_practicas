@@ -17,20 +17,20 @@ static inline void bitmap_setbit(char *bitmap_, int i_, int val_) { /*El código
 #define MAX_FS_SIZE 10485760 	/* Tamaño máximo del sistema de ficheros en bytes*/
 #define MIN_FS_SIZE 51200 		/* Tamaño mínimo del sistema de ficheros en bytes */
 #define META_BLOCKS 2 			/* Número de bloques que contienen metadatos en el dispositivo */
+#define INDEX_SIZE 512 			/* Número de entradas que tendrá el índice de un fichero */
 
 #include <stdint.h>				//Header para utilizar uint
 
 /* Estructura para el superbloque. Los datos útiles ocupan 5216 bits, 652 bytes. El superbloque completo ocupa 2048 bytes (1 bloque) */
 typedef struct {
+	uint16_t numBloquesDatos; 	/* Número de bloques de datos totales en el disp */
 	uint8_t numInodos; 			/* Número de inodos totales en el dispositivo */
-	uint16_t numBloquesDatos; 	/* Número de bloques de datos totales en el disp. Lo ponemos como short porque no hace falta que sea un ing. Ocupa 5 * 2^10*/
 	char bmapai[5]; 			//Mapa de bits de los inodos
 	char bmapab[640]; 			//Mapa de bits de los bloques de datos
 	uint32_t tamDispositivo; 	/* Tamaño total del disp. (en bytes)*/
-	char relleno[1396]; 		//Relleno del bloque
 } superbloque;
 
-/* Estructura para cada inodo. Ocupa 336 bits, 42 bytes. */
+/* Estructura para cada inodo. Ocupa 336 bits, 42 bytes. Pero por alinear los datos, se quedan como 44*/
 typedef struct {
 	char nombre[32]; 			/* Nombre del fichero/directorio asociado cuya longitud máxima es de 32 caracteres */
 	uint32_t tamanyo; 			/* Tamaño actual del fichero en bytes */
