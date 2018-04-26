@@ -338,19 +338,19 @@ int readFile(int fileDescriptor, void *buffer, int numBytes)
 	{
 	    memset(&aux, 0, BLOCK_SIZE);
 	    /* Se lee el bloque en el que esté el puntero */
-	    bread(DEVICE_IMAGE, indice[(int) punteros_lec_esc[fileDescriptor]/BLOCK_SIZE] , aux);
+	    bread(DEVICE_IMAGE, META_BLOCKS + indice[(int) punteros_lec_esc[fileDescriptor]/BLOCK_SIZE], aux);
 	    /* Si queda por leer más de lo que queda del bloque */
-	    if (numBytes-leidos > (BLOCK_SIZE-punteros_lec_esc[fileDescriptor]%BLOCK_SIZE))
+	    if (numBytes-leidos > (BLOCK_SIZE-(punteros_lec_esc[fileDescriptor]%BLOCK_SIZE)))
 	    {
 	    	/* Se lee lo que queda del bloque en el que está el puntero */
-	    	memcpy(&buffer + leidos, &aux + punteros_lec_esc[fileDescriptor]%BLOCK_SIZE, BLOCK_SIZE - punteros_lec_esc[fileDescriptor]%BLOCK_SIZE);
+	    	memcpy(&buffer + leidos, &aux + (punteros_lec_esc[fileDescriptor]%BLOCK_SIZE), (BLOCK_SIZE-(punteros_lec_esc[fileDescriptor]%BLOCK_SIZE)));
 	    	/* Y se actualizan el número de bytes leídos y el puntero */
-	    	leidos += BLOCK_SIZE - (punteros_lec_esc[fileDescriptor]%BLOCK_SIZE);
-	    	punteros_lec_esc[fileDescriptor] += punteros_lec_esc[fileDescriptor]%BLOCK_SIZE;
+	    	leidos += (BLOCK_SIZE-(punteros_lec_esc[fileDescriptor]%BLOCK_SIZE));
+	    	punteros_lec_esc[fileDescriptor] += (punteros_lec_esc[fileDescriptor]%BLOCK_SIZE);
 
 	    } else {
 	    	/* Se leen tantos bytes como quedan por leer en bloque en el que está el puntero */
-	    	memcpy(&buffer + leidos, &aux + punteros_lec_esc[fileDescriptor]%BLOCK_SIZE, numBytes - leidos);
+	    	memcpy(&buffer + leidos, &aux + (punteros_lec_esc[fileDescriptor]%BLOCK_SIZE), numBytes - leidos);
 	    	/* Y se actualizan el número de bytes leídos y el puntero */
 	    	leidos += numBytes - leidos;
 	    	punteros_lec_esc[fileDescriptor] += (numBytes - leidos);
@@ -420,18 +420,18 @@ int writeFile(int fileDescriptor, void *buffer, int numBytes)
 			}
 		}
 		/* Se lee el bloque en el que esté el puntero */
-	    bread(DEVICE_IMAGE, indice[(int) punteros_lec_esc[fileDescriptor]/BLOCK_SIZE] , aux);
+	    bread(DEVICE_IMAGE, META_BLOCKS + indice[(int) punteros_lec_esc[fileDescriptor]/BLOCK_SIZE] , aux);
 		/* Si queda por escribir más de lo que queda de bloque */
-	    if ((numBytes - escritos) > (BLOCK_SIZE-punteros_lec_esc[fileDescriptor]%BLOCK_SIZE))
+	    if ((numBytes - escritos) > (BLOCK_SIZE-(punteros_lec_esc[fileDescriptor]%BLOCK_SIZE)))
 	    {
 	    	/* Se escribe lo que queda del bloque en el que está el puntero */
-	    	memcpy(&aux + punteros_lec_esc[fileDescriptor]%BLOCK_SIZE, &buffer + escritos, BLOCK_SIZE - punteros_lec_esc[fileDescriptor]%BLOCK_SIZE);
+	    	memcpy(&aux + (punteros_lec_esc[fileDescriptor]%BLOCK_SIZE), &buffer + escritos, (BLOCK_SIZE-(punteros_lec_esc[fileDescriptor]%BLOCK_SIZE)));
 	    	/* Y se actualizan el número de bytes escritos y el puntero */
-	    	escritos += BLOCK_SIZE - (punteros_lec_esc[fileDescriptor]%BLOCK_SIZE);
+	    	escritos += (BLOCK_SIZE-(punteros_lec_esc[fileDescriptor]%BLOCK_SIZE));
 	    	punteros_lec_esc[fileDescriptor] += punteros_lec_esc[fileDescriptor]%BLOCK_SIZE;
 	    } else {
 	    	/* Se escriben tantos bytes como quedan por escribir en el bloque en el que está el puntero */
-	    	memcpy(&aux + punteros_lec_esc[fileDescriptor]%BLOCK_SIZE, &buffer + escritos, numBytes - escritos);
+	    	memcpy(&aux + (punteros_lec_esc[fileDescriptor]%BLOCK_SIZE), &buffer + escritos, numBytes - escritos);
 	    	/* Y se actualizan el número de bytes leídos y el puntero */
 	    	escritos += numBytes - escritos;
 	    	punteros_lec_esc[fileDescriptor] += (numBytes - escritos);
