@@ -10,6 +10,7 @@
 #include <string.h>
 #include <stdint.h>
 #include "include/filesystem.h"
+#include "include/metadata.h"
 
 
 // Color definitions for asserts
@@ -27,6 +28,11 @@ int main() {
 	int fd = 0;
 	int leidos = 0;
 	int escritos = 0;
+	char aux [BLOCK_SIZE];
+	uint8_t lleno [131072];
+	lleno[0] = 1;
+	lleno[66523] = 1; 
+	lleno [131071] = 1;
 	/* Se comprueba que no se pueden montar sistemas de ficheros con tamaños fuera del rango */
 	/* CP1 */
 	ret = mkFS(24*BLOCK_SIZE);
@@ -92,7 +98,7 @@ int main() {
 	/* Se comprueba que no se pueden crear dos ficheros con el mismo nombre */
 	/* CP9 */
 	ret = createFile("test.txt");
-	if(ret == 0) {
+	if(ret != -1){
 		fprintf(stdout, "%s%s%s%s%s", ANSI_COLOR_BLUE, "No se pueden crear dos ficheros con el mismo nombre ", ANSI_COLOR_RED, "FALSO\n", ANSI_COLOR_RESET);
 	} else {
 		fprintf(stdout, "%s%s%s%s%s", ANSI_COLOR_BLUE, "No se pueden crear dos ficheros con el mismo nombre ", ANSI_COLOR_GREEN, "VERDADERO\n", ANSI_COLOR_RESET);
@@ -108,17 +114,13 @@ int main() {
 			fprintf(stdout, "%s%s%s%s%s", ANSI_COLOR_BLUE, "No se pueden crear más de 40 ficheros ", ANSI_COLOR_RED, "FALSO\n", ANSI_COLOR_RESET);
 			break;
 		}
-		if (ret == -1 && i == 39)
+		if (ret == -2 && i == 39)
 		{
 			fprintf(stdout, "%s%s%s%s%s", ANSI_COLOR_BLUE, "No se pueden crear más de 40 ficheros ", ANSI_COLOR_GREEN, "VERDADERO\n", ANSI_COLOR_RESET);
 		}
 	}
 	/* Se comprueba que no se puede escribir en ficheros sin abrir */
 	/* CP11 */
-	uint8_t lleno [131072];
-	lleno[0] = 1;
-	lleno[66523] = 1; 
-	lleno [131071] = 1;
 	escritos = writeFile(0, lleno, sizeof(lleno));
 	if (escritos != -1)
 	{
@@ -128,7 +130,7 @@ int main() {
 	}
 	/* Se comprueba que no se puede leer en ficheros sin abrir */
 	/* CP12 */
-	char aux [BLOCK_SIZE];
+	
 	leidos = readFile(0, aux, sizeof(aux));
 	if (leidos != -1)
 	{
@@ -148,7 +150,7 @@ int main() {
 	/* Se comprueba que se puede abrir un fichero que existe */
 	/* CP14 */
 	fd = openFile("test.txt");
-	if (fd == -1)
+	if (fd != 0)
 	{
 		fprintf(stdout, "%s%s%s%s%s", ANSI_COLOR_BLUE, "Se puede abrir un fichero que existe ", ANSI_COLOR_RED, "FALSO\n", ANSI_COLOR_RESET);
 	} else {
@@ -156,8 +158,8 @@ int main() {
 	}
 	/* Se comprueba que no se puede abrir dos veces un fichero */
 	/* CP15 */
-	fd = openFile("test.txt");
-	if (leidos != -1)
+	ret = openFile("test.txt");
+	if (ret != -2)
 	{
 		fprintf(stdout, "%s%s%s%s%s", ANSI_COLOR_BLUE, "No se puede abrir dos veces un fichero ", ANSI_COLOR_RED, "FALSO\n", ANSI_COLOR_RESET);
 	} else {
@@ -166,27 +168,71 @@ int main() {
 	/* Se comprueba que no se puede escribir en un descriptor inválido */
 	/* CP */
 	escritos = writeFile(-1, lleno, sizeof(lleno));
-		if (escritos != -1)
+	if (escritos != -1)
 	{
 		fprintf(stdout, "%s%s%s%s%s", ANSI_COLOR_BLUE, "No se puede escribir en descriptor inválido ", ANSI_COLOR_RED, "FALSO\n", ANSI_COLOR_RESET);
 	} else {
 		fprintf(stdout, "%s%s%s%s%s", ANSI_COLOR_BLUE, "No se puede escribir en descriptor inválido ", ANSI_COLOR_GREEN, "VERDADERO\n", ANSI_COLOR_RESET);
 	}
 	/* Se comprueba que no se puede leer de un descriptor inválido */
-	leidos = readFile(0, aux, sizeof(aux));
+	/* CP */
+	leidos = readFile(-1, aux, sizeof(aux));
 	if (leidos != -1)
 	{
 		fprintf(stdout, "%s%s%s%s%s", ANSI_COLOR_BLUE, "No se puede leer de un descriptor inválido ", ANSI_COLOR_RED, "FALSO\n", ANSI_COLOR_RESET);
 	} else {
 		fprintf(stdout, "%s%s%s%s%s", ANSI_COLOR_BLUE, "No se puede leer de un descriptor inválido ", ANSI_COLOR_GREEN, "VERDADERO\n", ANSI_COLOR_RESET);
 	}
-	/* Se comprueba si se puede escribir en un fichero y si este se puede ampliar hasta 1 MiB */
-	if (escritos == 4096)
+	/* Se comprueba que se puede cerrar un fichero abierto */
+	/* CP */
+	ret = closeFile(fd);
+	if (fd != 0)
 	{
-		fprintf(stdout, "%s%s%s%s%s", ANSI_COLOR_BLUE, "Se puede escribir en un archivo hasta ampliarlo a 1 MiB ", ANSI_COLOR_GREEN, "VERDADERO\n", ANSI_COLOR_RESET);
+		fprintf(stdout, "%s%s%s%s%s", ANSI_COLOR_BLUE, "Se puede cerrar un fichero abierto ", ANSI_COLOR_RED, "FALSO\n", ANSI_COLOR_RESET);
 	} else {
-		fprintf(stdout, "%s%s%s%s%s", ANSI_COLOR_BLUE, "Se puede escribir en un archivo hasta ampliarlo a 1 MiB ", ANSI_COLOR_RED, "FALSO\n", ANSI_COLOR_RESET);
+		fprintf(stdout, "%s%s%s%s%s", ANSI_COLOR_BLUE, "Se puede cerrar un fichero abierto ", ANSI_COLOR_GREEN, "VERDADERO\n", ANSI_COLOR_RESET);
 	}
+	/* Se comprueba que no se puede cerrar un archivo no abierto */
+	/* CP */
+	ret = closeFile(1);
+	if (ret != -1)
+	{
+		fprintf(stdout, "%s%s%s%s%s", ANSI_COLOR_BLUE, "No se puede cerrar un fichero no abierto ", ANSI_COLOR_RED, "FALSO\n", ANSI_COLOR_RESET);
+	} else {
+		fprintf(stdout, "%s%s%s%s%s", ANSI_COLOR_BLUE, "No se puede cerrar un fichero no abierto ", ANSI_COLOR_GREEN, "VERDADERO\n", ANSI_COLOR_RESET);
+	}
+	/* Se comprueba que no se puede cerrar un archivo ya cerrado */
+	/* CP */
+	ret = closeFile(fd);
+	if (ret != -1)
+	{
+		fprintf(stdout, "%s%s%s%s%s", ANSI_COLOR_BLUE, "No se puede cerrar un archivo ya cerrado ", ANSI_COLOR_RED, "FALSO\n", ANSI_COLOR_RESET);
+	} else {
+		fprintf(stdout, "%s%s%s%s%s", ANSI_COLOR_BLUE, "No se puede cerrar un archivo ya cerrado ", ANSI_COLOR_GREEN, "VERDADERO\n", ANSI_COLOR_RESET);
+	}
+	/* Se comprueba que no se puede cerrar un archivo con descriptor de fichero inválido */
+	/* CP */
+	ret = closeFile(-1);
+	if (ret != -1)
+	{
+		fprintf(stdout, "%s%s%s%s%s", ANSI_COLOR_BLUE, "No se puede cerrar un decsriptor inválido ", ANSI_COLOR_RED, "FALSO\n", ANSI_COLOR_RESET);
+	} else {
+		fprintf(stdout, "%s%s%s%s%s", ANSI_COLOR_BLUE, "No se puede cerrar un decsriptor inválido ", ANSI_COLOR_GREEN, "VERDADERO\n", ANSI_COLOR_RESET);
+	}
+	/* Se comprueba si se puede escribir en un fichero */
+	fd = openFile("test.txt");
+	escritos = writeFile(fd, lleno, BLOCK_SIZE);
+	if (escritos != BLOCK_SIZE)
+	{
+		fprintf(stdout, "%s%s%s%s%s", ANSI_COLOR_BLUE, "Se puede escribir en un fichero ", ANSI_COLOR_RED, "FALSO\n", ANSI_COLOR_RESET);
+	} else {
+		fprintf(stdout, "%s%s%s%s%s", ANSI_COLOR_BLUE, "Se puede escribir en un fichero ", ANSI_COLOR_GREEN, "VERDADERO\n", ANSI_COLOR_RESET);
+	}
+
+
+	/* Se comprueba si se puede escribir en un fichero y si este se puede ampliar hasta 1 MiB */
+	/* CP */
+	
 	/* Se comprueba si se puede leer un fichero entero en varias llamadas 
 	uint8_t aux [131072];
 	leidos = readFile(fd, aux, sizeof(aux)/2);
