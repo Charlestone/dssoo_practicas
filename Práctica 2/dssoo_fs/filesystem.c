@@ -398,7 +398,7 @@ int writeFile(int fileDescriptor, void *buffer, int numBytes)
 	bread(DEVICE_IMAGE, META_BLOCKS + inodos[fileDescriptor].bloqueIndirecto, aux);
 	memcpy(&indice, &aux, (sizeof(uint16_t)*INDEX_SIZE));
 	/* Mientras quede por escribir */
-	while((numBytes - escritos) != 0) 
+	while((numBytes - escritos) > 0) 
 	{
 		memset(&aux, 0, BLOCK_SIZE);
 		/* Se comprueba si se va a exceder el tamaño máximo de fichero */
