@@ -440,7 +440,7 @@ int writeFile(int fileDescriptor, void *buffer, int numBytes)
 	    bwrite(DEVICE_IMAGE, META_BLOCKS + indice[(int) punteros_lec_esc[fileDescriptor]/BLOCK_SIZE], aux);
 	}
 	/* Escribimos el índice actualizado en el disco */
-	memset(&aux, '0', BLOCK_SIZE);
+	memset(&aux, 0, BLOCK_SIZE);
 	memcpy(&aux, &indice, (sizeof(uint16_t)*INDEX_SIZE));
 	bwrite(DEVICE_IMAGE, META_BLOCKS + inodos[fileDescriptor].bloqueIndirecto, aux);
 	/* Actualizamos el tamaño del fichero si es necesario */
